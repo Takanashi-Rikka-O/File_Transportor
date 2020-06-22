@@ -30,9 +30,9 @@ namespace FTPR{
 		The_CMD_Hit.CMDN=0;			// The macro definition of cmds had been defined.Zero is a error value.
 		The_CMD_Hit.CMDP=NULL;			// This pointer will point to a command string.
 
-		PTC=NULL,FIDC=NULL,TSC=NULL,SYSS=NULL;		// Null.
+		PTC=NULL,FIDC=NULL,TSC=NULL,SYSS=NULL;		// Null.Them will be create by inherted class.
 
-		syslog(LOG(LOG_INFO),"The Basic class created.");
+		syslog(LOG(LOG_INFO),"FTPR: The Basic class created.");
 
 	}
 
@@ -57,11 +57,11 @@ namespace FTPR{
 				delete SYSS;
 			else;
 		
-			syslog(LOG(LOG_NOTICE),"Basic class had deleted.");
+			syslog(LOG(LOG_NOTICE),"FTPR: Basic class had destroied.");
 
 		}
 		else
-			syslog(LOG(LOG_ERR),"Basic class does not be succeed to created.");
+			syslog(LOG(LOG_ERR),"FTPR: Basic class does not be succeed to created.");
 
 	}
 	
@@ -69,7 +69,7 @@ namespace FTPR{
 	// Virtual method read setting.
 	short int FTPR_Basic::_Read_Setting_(const char *Setting_File)
 	{
-		syslog(LOG(LOG_ERR),"Do not call this function,this function must be overwire in other class.");
+		syslog(LOG(LOG_ERR),"FTPR: Do not call this function,this function must be overwire in other class.");
 	}
 
 

@@ -9,10 +9,9 @@ Name :
 
 Description : 
 
-	File_Transportor(FTPR),as C/S mode to download or upload between Server and Client.FTRP only services one of connection by the time,so its listen queue
-length is equal to 1.The first connection from user will as a network inactive tty.User can send some commands to server for request some working.After server
-finished work,the result of working would back to user.FTPR server would fork some child process for does some work.In the stiation of upload or download,user
-could tell server that how many threads for the work of it wants.
+	File_Transportor(FTPR),as C/S mode to download or upload between Server and Client.FTRP only services one of connection by the time,so its listen queue length is equal to 1.The first connection from user will as a network inactive tty.User can send some commands to server for request some working.
+	After server finished work,the result of working would back to user.FTPR server would open new thread for does some work.In the stiation of 
+upload or download.
 
 Commands :
 
@@ -30,7 +29,11 @@ Transfer_Verbose :
 	TCP/IP
 	socket
 
-	Default port of server : 4396
+	Port : 
+		The default communication port will use '4396'.User could revise configure file to change communication port,but if the option is not a right
+	format,program will use the default setting them will have encoding in program.
+	IP:
+		Default use the first IP Address in Host Address list.
 
 	# Could using TCP to send binary data.
 	
@@ -53,8 +56,8 @@ Server :
 
 	Design : 
 
-		Server and client are inherting from a abstract basic class.The class have TCP-Socket interfaces and File-Control interfaces Thread interfaces.
-	FTPR_server would fork a child process,and then the parent process quit.FTPR_server do initialization.
+		Server and client are inherting from a abstract basic class.The class have TCP-Socket interfaces and File-Control interfaces Thread 
+	interfaces and a Signal setting interface.FTPR_server would fork a child process,and then the parent process quit.FTPR_server do initialization.
 
 		FTPR_server
 			|
@@ -76,9 +79,9 @@ Server :
 		FTPR_server - only fork a child process and then quit.
 	
 		Set enviornment - 
-				1> Change work home.
-				2> Set root tree.
-				3> Set umask.
+			#	1> Change work home.
+			#	2> Set root tree.
+			#	3> Set umask.
 				4> Open a new session.
 				5> Close 0,1,2.
 
@@ -89,14 +92,16 @@ Server :
 		Initialization -
 				1> Open setting file and read settings,if file had be not existed,would use the default setting.
 				2> Initialize variables.
-				3> Set signal behavior.
-				4> Creat socket and Bind it.
-				5> Open listen queue.
-		
+				3> Set root tree.
+				4> Change work home.
+				5> Set signal behavior.
+
 		Wait connection -
-				1> Call accept to wait connection from client.
-				2> Entry command responition mode.
-				3> Finish work.
+				1> Creat socket and Bind it.
+				2> Open listen queue.
+				3> Call accept to wait connection from client.
+				4> Entry command responition mode.
+				5> Finish work.
 
 		Shutdown -
 				1> Close files these had been opened.
@@ -110,31 +115,40 @@ Server :
 			logout : Shutdown a connection from client. (Client command)
 			GET File : (Client command)
 				This command would received by server from client.And server would build a message send to client,style like this :
-					< "#PORT=XX#FileName=SS#Size=NN#\0" > (Bytes)
+			#		< "#PORT=XX#FileName=SS#Size=NN#\0" > (Bytes)
+
+				I found TCP could used to send structure,so could define a structure to save file info.After a message,peer send this 
+			structure to peer.
 				Before send,server must to check this file whether had existed.This command would send after the server had been creating a 
 			new pthread and planed to respones this request.Client receive this command and parsing it,get port number then try to make connection
 			 with it.While Socket I/O use a number for limit to connection.Timeout continuous exceeded setting number,server would disconnect this
 			connection.
 
-				Error-String :
-					File not existed : "The file FileName had not existed."
-					Timeout : "Wait peer to connect was time out."
-					Retry exceeded : "Network I/O failed."
+				Server first to check this file whether had existed from required by client.If existed,server make a structure and full file
+			information,that contains 'UsePort,FileName,FileSize'.
+				Because server must testing open thread,so after thread normaly started,server send message '#OK#' to client.While client 
+			had received this message,it will read socket for a structure.If client can not preparate for file receiving,it will initiative to
+			give up for this connection.And then server will timeout.
+
+
 
 			UP File : (Client command)
 				This command as same feature as 'GET File',but it is upload.Server must at first try to make a new tempfile.If failed,return a
 			error string.
 
-				Error-String :
-					Try to make file failed : "Server can not make a new file."
-					Tiemout : "Wait peer to connect was time out."
-					Retry exceeded : "Network I/O failed."
+				Server first to check this file whether had existed from required by client.If existed,server will send a error message to 
+			client.If had not existed,server send '#UPINFO#',after client received this message,it must is send the file information structure to
+			server.And also,server try to open thread,after thread normaly to starting,server return '#OK#',and send this file info structure to
+			client,but it full the UsePort field.
+
 	Signal : 
 
 		SIGTERM		// Termination.
 		SIGINT		// Interrupt.
 		SIGHUP		// HungUp.
 		SIGALRM		// Alarm.
+
+		# Because the server never read or write 0,1,2 so need not to captures SIGTTIN SIGTTOU.
 
 Client : 
 
@@ -200,29 +214,21 @@ Client :
 			link : Make link to server.
 			GET File :
 				Send this command and wait responition from server.If command succeed,server will return a link info string :
-					< "#PORT=XX#FileName=SS#Size=NN#\0" > (Bytes)
+			#		< "#PORT=XX#FileName=SS#Size=NN#\0" > (Bytes)
 				Client parsing this string and open a new pthread try to make connection with server download poer.Before download,client must
 			try to make new file.If failed to make new file,it would return error string to user.The server'upload will be closing after timeout.
 
-				Error-String : 
-					# Some error string will send by server,there only have some client error strings.
-					Retry exceeded : "Network I/O failed." And client will send a EOF to server.
-					Try to make file failed : "Client can not make a tempfile."
-					Can not make connectiton : "Can not connect to server."
-					
+				Client received message '#OK#' then try to receive a file info structure,and then open thread try to make connect.If client
+			can not normaly finished ready work,it must give up for this connection.And then server will timeout.
 				
 
 
 			UP File :
 				This command feature as same as 'GET File'.But it is upload to server.So client must try to open file,if failed,send EOF to
 			server.
-				
-				Error-String : 
-					File not existed : "The FileName had not existed." (Do not connect)
-					Can not make connection : "Can not connect to server."
-					Retry exceeded : "Network I/O failed." And client send a EOF to server.
 					
-			
+				Client received message '#UPINFO#' then send file info structure to server,but UsePort is NULL.That field will be fulling by
+			server.After server already,it will return '#OK#' then client could try to connect it.
 
 
 	Signal :
@@ -422,7 +428,8 @@ Basic class :
 				<make command string> <cut file info> <read shared setting>
 
 	!!	For upgrad setting optionals,must make the setting reading function as a shared library function.
-	# FTPR_Basic contain the functions for make fileinfo and cut fileinfo.Server and client could using them to get file information from peer.
+
+	# Several structures will be using at some class all is defined in named space FTPR.
 
 
 Working_Verbose : 
@@ -504,7 +511,10 @@ Posix Threads Model :
 			Because this model will IO file,so it need a FID_class object.
 			Because this model will open a new thread to timing for itself,so it need a Timer function and timeout value.
 			Because this model will open timer,and timer does not join to main thread,so it need a detach thread attribut object.
-			Because while this model finishing,main thread must wait it finished,so it need a pthread_mutex_t object.
+			Because while this model finishing,main thread must wait it finished,so it need a pthread_mutex_t object.	
+																|--- THREAD class *
+	
+			Because this model respone two situation for network IO,so it need a structure to get network IO information.
 
 			struct FGU{
 					TCP_SOCK_class *Tcp_Sock;	// Socket and Network IO.
@@ -516,12 +526,30 @@ Posix Threads Model :
 
 			Lock mutex->Set cancel type->Bind File socket->Open listen->Unlock mutex->Open timer->Accept->Cancel timer->Work->Exit.
 
+			GET/UP thread model does not set as deatch,but it receive cancel request,after it unlock.Main thread will wait it.
 
-			GET/UP thread model does not set as deatch,but it receive cancel request,after it unlock.main thread will wait it.
+		# This thread had designed,but does not wait write for network.
 
 
-Setting of Server :
+Library: !!!
 
+	For simply upgrad,'setting' or 'command respones' or 'thread desing' or ...;
+	I intend to make these features as shared library.It could make non retranslate adding new feature or optimization.
+
+	Libs:
+
+		"FTPR' Read-shared-setting"
+		It respones shared setting read from configure file full to strcture.Design it as shared lib could adding new option but need not to 
+	retranslate code.
+
+		"FTPR' Thread-IO & Timer"
+		Make them as shared lib could new design thread function as quickly as it process.
+
+		'FTPR Server or Client Read-shared-setting"
+		The reason is like "FTPR Read-shared-setting"
+
+		'FTPR Server or Client command responer"
+		The program is not probably only these command to use,make them as shared lib,can adding new command at upgrad.
 Enviornment : 
 
 	GNU/Linux Centos 7 - 1062 x86_x64

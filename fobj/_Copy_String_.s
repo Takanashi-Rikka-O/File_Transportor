@@ -14,6 +14,7 @@
 #	Functions :
 #		void _Copy_String_(char *Destination,const char *Source,const size_t Copy_Size);
 #		While parameters are passing,Des would be sending to RDI,Src would be sending to RSI,Copy_Size would be sending to RDX.
+#	Function will check length for destination,if length is less than Copy_Size,then only copy the length-1 bytes.
 #	Header :
 #		None.
 #
@@ -33,7 +34,7 @@
 		#	Return : void ;
 		#	Arguments : Two character pointers for source and destination ; A number for copy size ;
 		#		Arguments use C function constraintion : R->L stack ;
-		#	Registers would be using : RSI,RDI,RCX ;
+		#	Registers would be using : RSI,RDI,RDX,RCX,RBP ;
 		#	Because currently system ABI is SystemV ABI x86-64,so the parameters passing use RDI,RSI,RDX,RCX,R8,R9 (L->R).Now don't use stack to
 		# get the number for three of parameters as well.
 
@@ -43,19 +44,33 @@
 	
 			# NO.1->RDI,NO.2->RSI,NO.3->RDX ;
 
-			push	%RCX	# Save RCX.
-			movq	%RDX,%RCX	# Get the Copy_Size to RCX.
-			movb	$0,(%RDI,%RDX,0x01)	# Append a null byte.
-			
+			push	%RCX		# Save RCX.
+			push	%RAX
+
+			movq	%RDX,%RCX
+			movb	$0x00,(%RDI,%RCX,0x01)	# End zero
+			movq	$0x00,%RDX	# Index
 			
 		_Work_Of_Copy_String_:
 
-			cld	# Clear DF flag.
+			_Copy_Cycle_:
 
-			rep movsb	# Repeat to copy characters.
+				cmp	$0x00,(%RSI,%RDX,0x01)
+
+				movb	(%RSI,%RDX,0x01),%AL	# Move to al.
+				movb	%AL,(%RDI,%RDX,0x01)	# Move to des.
+
+				je	_Return_To_Caller_	# A null byte.
+
+				incq	%RDX	# Index++
+					
+				loop	_Copy_Cycle_
+
 
 		_Return_To_Caller_:
 
+
+			pop	%RAX	# Restory RAX.
 			pop	%RCX	# Restore RCX.
 	
 			ret	# Return.

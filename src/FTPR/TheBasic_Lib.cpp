@@ -102,7 +102,7 @@ namespace FTPR{
 					else if (0 == strncmp(In_Buffer,"RSIO",4))	// Retry network IO number.
 						Share_Set.Retry_Net_IO=((Temp_Num=_Get_Number_Of_Optional_(In_Buffer)) != -1)?Temp_Num:Default_RSIO;
 					else
-						syslog(LOG(LOG_ERR),"This option have not be defined.");
+						syslog(LOG(LOG_ERR),"FTPR: This option have not be defined.");
 				}
 
 				delete[] In_Buffer;	// Recycle memory.
@@ -115,7 +115,7 @@ namespace FTPR{
 				}
 				else
 				{
-					syslog(LOG(LOG_ERR),"Detected a undefine error in the time of reading setting file.");
+					syslog(LOG(LOG_ERR),"FTPR: Detected a undefine error in the time of reading setting file.");
 					return false;
 				}
 
@@ -123,7 +123,7 @@ namespace FTPR{
 			}
 			else
 			{
-				syslog(LOG(LOG_ERR),"Failed to get memory for setting optional.");
+				syslog(LOG(LOG_ERR),"FTPR: Failed to get memory for setting optional.");
 				return false;
 			}
 			
@@ -131,7 +131,7 @@ namespace FTPR{
 		}
 		else
 		{
-			syslog(LOG(LOG_ERR),"Open config file failed.");
+			syslog(LOG(LOG_ERR),"FTPR: Open config file failed.");
 			return false; // Failed to open file.
 		}
 

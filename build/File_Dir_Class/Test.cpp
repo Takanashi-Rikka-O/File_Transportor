@@ -7,7 +7,7 @@ using namespace FID;
 
 int main(void)
 {
-	FID_class Test;
+	FID_class Test(".");
 
 	char* Item_Name=new char[125];
 	if (Item_Name)

@@ -1,7 +1,7 @@
 //	TCP_SOCK_class.h
-//	Version : 0.1
+//	Version : 0.2
 //	Date : Fri May 29 10:26:56 2020
-//	Last revise : Fri May 29 10:26:56 2020
+//	Last revise : Sat Jun 29 22:48:? 2020
 //	Symbol-Constraint :
 //			_Xx..._ - Function Symbol
 //			Xx...|x|X - Variable Symbol
@@ -19,7 +19,12 @@
 //		<netdb.h>		Net database.
 //		<arpa/inet.h>		ARP.
 //		<poll.h>		poll();
-//		
+//
+//	Fixs :
+//		1> Adjustment build method,now must send build method two numbers type is unsigned short int for ports and must send to timeout value.
+//		2> Delete _Set_Port_ function,because ports must be assigned in build method,now.
+//		3> Default use socket option SO_REUSEPORT in level SOL_SOCKET for [1] port.
+//		4> Adjustment record format.
 
 #ifndef _TCP_SOCK_CLASS_H_
 #define _TCP_SOCK_CLASS_H_
@@ -76,7 +81,8 @@ namespace SOCKET{
 			//	Monitoring status.
 			bool State_Of_Initialization_SOCK;
 
-			TCP_SOCK_class();	//	build
+			// Default build.
+			TCP_SOCK_class(unsigned short int Comm_Port,unsigned short int FT_Port,unsigned short int Main_Timing,unsigned short int DownUp_Timing);
 			~TCP_SOCK_class();	//	clear.
 
 			/*	Host byte order convertion.	*/
@@ -121,7 +127,7 @@ namespace SOCKET{
 			
 
 			// M_Or_D control set which pollfd.
-			bool _POLL_SET_(const short int Comm_DU,const int Event,const int TIMEOUT_Value);	
+			void _POLL_SET_(int SocketWait,const short int Which,const int Event);	
 			// Use this function must apply a constraint,the arraies must as int-0 end.
 
 			bool _Check_Main_(const int Event)	// If revent by poll is equal to this parameter,return true.
@@ -143,10 +149,8 @@ namespace SOCKET{
 
 			/*	Network socket IO functions	*/
 			ssize_t _READ_SOCK_(const int SocketI,void *Net_Buffer,const size_t To_Read);	// If read a '\0',reading 
-			ssize_t _WRITE_SOCK_(const int SocketW,const void *Net_Buffer,const size_t To_Write);
-		
-			// Use this function to set ports.
-			bool _Set_Ports_(const short int Which,const unsigned short int Port_Number);	// [0]->Main,[1]->Thread.	
+			ssize_t _WRITE_SOCK_(const int SocketW,const void *Net_Buffer,const size_t To_Write);	
+	
 			int _Get_Socket_(const short int Which);
 
 	};

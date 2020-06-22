@@ -1,7 +1,7 @@
 //	FTPR.h
-//	Version : 0.1
+//	Version : 0.2.1
 //	Date : Mon Jun  8 20:26:19 2020
-//	Last revise : Mon Jun  8 20:26:19 2020
+//	Last revise : Sun Jun  21 14:07:? 2020
 //	Symbol-Constraint :
 //			_Xx..._ - Function Symbol
 //			Xx...|x|X - Variable Symbol
@@ -12,6 +12,11 @@
 //	Header :
 //		"Share_Header.h"
 //		<sys/stat.h>
+//
+//	Fixs :
+//		1> Adjustment thread function and the structure Network_IO_Information it will use.
+//		2> Record format.
+//		3> All log will be record by caller for thread function.
 
 #ifndef _FTPR_H_
 #define _FTPR_H_
@@ -30,6 +35,7 @@
 #define CD 21
 #define GET 22
 #define UP 23
+#define LOGOUT 24
 
 /*	There define default value of shared optionals.	*/
 
@@ -66,9 +72,11 @@
 #define FF_GET_IO_BUFF_ERR 6		// Can not get memory for file IO.
 #define FF_CANCEL_TIMER_ERR 7		// Can not shutdown timer which had opened.
 #define FF_GET_SUSS 8			// Succeed to finished send file work.
-#define FF_UP_SUSS 9			// Succeed to finished receive file work.
-#define FF_BEHAVIOR_ERR 10		// Do know what is this work flag.
-#define FF_ACCEPT_BAD 11		// Accept return less than 0.
+#define FF_GET_ERR 9			// Detected error in thread.
+#define FF_UP_SUSS 10			// Succeed to finished receive file work.
+#define FF_UP_ERR 11			// Detected error in thread.
+#define FF_BEHAVIOR_ERR 12		// Do know what is this work flag.
+#define FF_ACCEPT_BAD 13		// Accept return less than 0.
 //	Main thread of Thread_FF must call 'join' wait it and receive state code from it.
 /*			End.				*/
 
@@ -137,7 +145,7 @@ namespace FTPR{
 			unsigned short int CMDN;
 		
 			/* Command element pointer */
-			void *CMDP;
+			const void *CMDP;
 
 			};
 
@@ -153,14 +161,12 @@ namespace FTPR{
 
 	using NETIOINFO=struct Network_IO_Inforamtion{
 
-			// Option NIOTIMEOUT.
-			unsigned short Network_IO_Timeout_Value;
 			// Option FBUFF.
-			unsigned short Network_File_IO_Buffer;
+			unsigned short int Network_File_IO_Buffer;
 			// What behavior hot.
 			short int What_Behavior;
 			// Retry Number.
-			unsigned short Retry_Number;
+			unsigned short int Retry_Number;
 
 			};
 
@@ -174,7 +180,7 @@ namespace FTPR{
 			// Posix thread interface class.
 			THREAD_class *IO_Thread;
 			// Timer timeout value.
-			unsigned short int Timer_Timeout;
+			unsigned short int Timer_Timeout;	// Will use CWAITS.
 			
 			// Network io info.
 			NETIOINFO Tcp_IO;
@@ -200,6 +206,8 @@ namespace FTPR{
 	
 			struct Shared_Setting Share_Set;	// Setting structure.
 			WCH The_CMD_Hit;		// This structure save the comamnd hit from client.
+
+			GET_UP File_Info;		// For file information.
 			
 
 			THREAD_class *PTC;	// Class pointer of THREAD_class.
@@ -215,22 +223,14 @@ namespace FTPR{
 	
 			virtual short int _Init_FC_(const void *SETTINGS)	// Use setting init feature classes.
 			{
-				syslog(LOG_ERR|LOG_USER,"Don't use this virtual function to init feature classes.");
+				syslog(LOG_ERR|LOG_USER,"FTPR: Don't use this virtual function to init feature classes.");
 			}
 	
 			/* Command parsing. */			
-			virtual WCH * _Command_Parsing_(const char *Command)
+			virtual void _Command_Parsing_(const char *Command)
 			{
-				syslog(LOG_ERR|LOG_USER,"Don't use this virtual function to Parsing command.");
+				syslog(LOG_ERR|LOG_USER,"FTPR: Don't use this virtual function to Parsing command.");
 			}
-
-			GET_UP File_Info;	// This object will be using at client request to download or upload a file.
-
-			virtual bool _RECEIVE_FILE_INFO_(const TCP_SOCK_class & TCP_OBJ,GET_UP *Target)	// This function only be overwrite in client.
-			{
-				// Server have not use this function,but is make a GET_UP object and full it.
-			}
-
 
 		public:
 
@@ -241,7 +241,7 @@ namespace FTPR{
 
 			FTPR_Basic(const FTPR_Basic & Temp_Object)
 			{
-				syslog(LOG_ERR,"This class does not supported copy.");
+				syslog(LOG_ERR,"FTPR: This class does not supported copy.");
 			}
 
 

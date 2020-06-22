@@ -47,8 +47,7 @@ namespace PTH{
 			syslog(LOG(LOG_ERR),"Init mutex failed.");
 			State_Of_Initialization_THREAD=false;
 		}
-		else
-			_LOCK_MUTEX_();	// Get lock.
+		else;
 
 	}
 

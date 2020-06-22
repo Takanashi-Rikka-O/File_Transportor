@@ -72,10 +72,12 @@ namespace FID{
 			int Current_Length_FDES;	// Length of FDES in parent.
 
 			void _CLEAR_LIST_(DIL* NODE);	//	Clear list.
+
+			int FID_TempFile;
 		public:
 
 
-			FID_class();
+			FID_class(const char *New_Work_Home);	// Build method should change work home at first.
 			~FID_class();
 
 			bool State_Of_Initialization_FID;	// The class object state in the meantime of initialization.
@@ -153,6 +155,11 @@ namespace FID{
                         {
                                 return FDES_OPENED[Current_Length_FDES-1];
                         }
+
+			int _Get_TempFile_(void)
+			{
+				return FID_TempFile;
+			}
 
 	};
 

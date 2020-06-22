@@ -1,7 +1,7 @@
 //	SYSTEM_SIGNAL_class.cpp
-//	Version : 0.1
+//	Version : 0.2
 //	Date : Thu Jun 11 18:55:55 2020
-//	Last revise : Thu Jun 11 18:55:55 2020
+//	Last revise : Sat Jun 20 21:42:55 2020
 //	Symbol-Constraint :
 //			_Xx..._ - Function Symbol
 //			Xx...|x|X - Variable Symbol
@@ -13,6 +13,8 @@
 //
 //	Header :
 //		"SYSTEM_SIGNAL_class.h"
+//	Fix :
+//		1> Adjustment record format,delete extral non usage members.
 
 namespace SYS_SIGNAL{
 
@@ -31,13 +33,13 @@ namespace SYS_SIGNAL{
 		if (_SIGEMPTYSET_(BLOCK_SET) < 0)
 		{
 			// Set normaly set was fault.
-			syslog(LOG(LOG_ERR),"Can not empty signal block set.");
+			syslog(LOG(LOG_ERR),"FTPR: Can not empty signal block set.");
 			State_Of_Initialization_SIGNAL=false;
 		}
 		else
 			if (_SIGEMPTYSET_(NORMAL_SET) < 0)
 			{
-				syslog(LOG(LOG_ERR),"Can not empty signal normaly set.");
+				syslog(LOG(LOG_ERR),"FTPR: Can not empty signal normaly set.");
 				State_Of_Initialization_SIGNAL=false;
 			}
 			else;
@@ -49,21 +51,16 @@ namespace SYS_SIGNAL{
 		Sigact.sa_flags|=SA_SIGINFO;
 		Sigact.sa_sigaction=NULL;
 
-		/*	Signal union object.	*/
-
-		Sigval.sival_int=0;
-		Sigval.sival_ptr=NULL;
-
 		/*	Record log.		*/
 
-		syslog(LOG(LOG_NOTICE),"Had created a signal class object.");
+		syslog(LOG(LOG_NOTICE),"FTPR: Had created a signal class.");
 
 	}
 	
 	SYSTEM_SIGNAL_class::~SYSTEM_SIGNAL_class()
 	{
 		// Because this class does not use any heap memory,so do not anymore.
-		syslog(LOG(LOG_INFO),"Had deleted signal class.");	
+		syslog(LOG(LOG_INFO),"FTPR: Had deleted signal class.");	
 	}
 
 	// Define others method.
@@ -155,7 +152,7 @@ namespace SYS_SIGNAL{
 	}
 
 
-	int SYSTEM_SIGNAL_class::_SIGACTION_(int SIG,(void)(*ACTION)(int,siginfo_t *,void *),const int FLAG)
+	int SYSTEM_SIGNAL_class::_SIGACTION_(int SIG,void(*ACTION)(int,siginfo_t *,void *),const int FLAG)
 	{
 		Sigact.sa_flags&=FLAG;			// At first,close other flags.
 		Sigact.sa_flags|=FLAG|SA_SIGINFO;	// Open this FLAG and SA_SIGINFO.
@@ -194,23 +191,4 @@ namespace SYS_SIGNAL{
 		return sigpending(Had_Block);
 	}
 
-	sigset_t SYSTEM_SIGNAL_class::_GET_LAST_SET_(const short int Which)
-	{
-		switch (Which)
-		{
-			case NORMAL_SET:
-				// Normal set.
-				return Signal_Set;
-
-			case BLOCK_SET:	// Otherwise return block set.
-			default:
-				return Signal_Block;
-		}
-
-	}
-
-	inline siginfo_t SYSTEM_SIGNAL_class::_GET_LAST_INFO_(void)
-	{
-		return Siginfo;
-	}
 }

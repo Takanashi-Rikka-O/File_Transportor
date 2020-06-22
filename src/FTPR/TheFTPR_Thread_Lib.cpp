@@ -75,7 +75,6 @@ namespace FTPR{
 		if (pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,NULL) < 0)
 		{
 			FF_Code=FF_SET_CANCEL_STATE_ERR;	// Failed state set.
-			syslog(LOG(LOG_ERR),"FTPR_FF: Set cancel state enable failed.");
 			FF_FGU->IO_Thread->_UNLOCK_MUTEX_();	// Unlock.
 			pthread_exit(&FF_Code);
 			
@@ -84,10 +83,8 @@ namespace FTPR{
 			if (pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS,NULL) < 0)
 			{
 				FF_Code=FF_SET_CANCEL_TYPE_ERR;
-				syslog(LOG(LOG_ERR),"FTPR_FF: Set cancel asynchronous failed.");
 				FF_FGU->IO_Thread->_UNLOCK_MUTEX_();	// Unlock.
 				pthread_exit(&FF_Code);
-
 			}
 			else;
 
@@ -97,7 +94,6 @@ namespace FTPR{
 		if (FF_FGU->Tcp_Sock->_BIND_(THREAD_SOCKET) < 0)
 		{
 			FF_Code=FF_BIND_SOCKET_ERR;
-			syslog(LOG(LOG_ERR),"FTPR_FF: Bind socket failed.");
 			FF_FGU->IO_Thread->_UNLOCK_MUTEX_();	// Unlock.
 			pthread_exit(&FF_Code);
 		}
@@ -105,7 +101,6 @@ namespace FTPR{
 			if (FF_FGU->Tcp_Sock->_LISTEN_(THREAD_SOCKET,1) < 0)
 			{
 				FF_Code=FF_OPEN_LISTEN_ERR;
-				syslog(LOG(LOG_ERR),"FTPR_FF: Open listen socket failed,");
 				FF_FGU->IO_Thread->_UNLOCK_MUTEX_();	// Unlock.
 				pthread_exit(&FF_Code);
 			}
@@ -123,11 +118,11 @@ namespace FTPR{
 			};	// Timer parameter.
 
 
-		
+	
+		// Open timer.	
 		if (FF_FGU->IO_Thread->_CREATE_THREAD_(&Timer_TID,&FF_FGU->IO_Thread->Thread_Attr,Thread_Timer,&Timer_Argument) < 0)
 		{
 			FF_Code=FF_OPEN_TIMER_ERR;
-			syslog(LOG(LOG_ERR),"FTPR_FF: Can not open timer.");
 			pthread_exit(&FF_Code);
 		}
 		else;
@@ -147,14 +142,12 @@ namespace FTPR{
 		if (NULL != FileIOB)
 		{
 			FF_Code=FF_GET_IO_BUFF_ERR;					// Error code.
-			syslog(LOG(LOG_ERR),"FTPR_FF: Can not get file io buffer.");	// Write record to log.
 			(void)FF_FGU->IO_Thread->_CANCEL_THREAD_(Timer_TID);		// Try to close timer.
 			pthread_exit(&FF_Code);
 		}
 		else;
 
 		// Wait a connect.
-
 		int New_Socket=FF_FGU->Tcp_Sock->_ACCEPT_(THREAD_SOCKET,(struct sockaddr *)&Peer_Addr,&Addr_Size);
 
 		// Up to now,had made a connection with client.
@@ -162,9 +155,10 @@ namespace FTPR{
 		// Cancel timer.
 		if (FF_FGU->IO_Thread->_CANCEL_THREAD_(Timer_TID) < 0)
 		{	
+			delete[] FileIOB;	// Delete buffer.
+
 			// Failed cancel timer.
 			FF_Code=FF_CANCEL_TIMER_ERR;
-			syslog(LOG(LOG_ERR),"FTPR_FF: Can not shutdown timer.");
 			pthread_exit(&FF_Code);
 		}
 		else
@@ -196,7 +190,7 @@ namespace FTPR{
 			 		{
 						// Write to peer.
 						if (FF_FGU->Tcp_Sock->_WRITE_SOCK_(New_Socket,FileIOB,Once_Read_File) < 0)
-							syslog(LOG(LOG_ERR),"FTPR_FF: Send data had error,return value less than 0.");
+							FF_Code=-1;	// For check whether have error for file transfer.
 						else;
 					}
 
@@ -204,7 +198,8 @@ namespace FTPR{
 					// Main thread respones to open file or trunc file,this thread will close file after send over.
 
 					// Work down.
-					FF_Code=FF_GET_SUSS;	// Succeed send.
+
+					FF_Code=(FF_Code == -1)?FF_GET_ERR:FF_GET_SUSS;	// Succeed send.
 
 					break;
 	
@@ -214,17 +209,18 @@ namespace FTPR{
 
 				{	
 
-					int Temp_Up_File=FF_FGU->Fid->_Get_Latest_Open_File_();
+					int Temp_Up_File=FF_FGU->Fid->_Get_TempFile_();
 					// Main thread have to open file and check file open status at before.
 
 					ssize_t Once_Read_Net=0;	// Record size had readed at onece.
 
-					FF_FGU->Tcp_Sock->_POLL_SET_(THREAD_SOCKET,POLLRDNORM,FF_FGU->Tcp_IO.Network_IO_Timeout_Value);	// Set pollfd.
+					// Now need not to set poll timeout,because TCP_SOCK_class will set it when it has create.
+					//FF_FGU->Tcp_Sock->_POLL_SET_(THREAD_SOCKET,POLLRDNORM,FF_FGU->Tcp_IO.Network_IO_Timeout_Value);	// Set pollfd.
 					unsigned short int Retry(FF_FGU->Tcp_IO.Retry_Number);	// Get network io retry number limit.
 
 					while (FF_FGU->Tcp_Sock->_POLL_(THREAD_SOCKET) != -1 && Retry > 0)
 					{
-						if (FF_FGU->Tcp_Sock->_Check_Thread_(POLLRDNORM))
+						if (FF_FGU->Tcp_Sock->_Check_Thread_(POLLRDNORM))	// TCP could read.
 						{
 							// Reset retry limit.
 							Retry=FF_FGU->Tcp_IO.Retry_Number;
@@ -232,7 +228,7 @@ namespace FTPR{
 							
 							Once_Read_Net=FF_FGU->Tcp_Sock->_READ_SOCK_(New_Socket,FileIOB,FF_FGU->Tcp_IO.Network_File_IO_Buffer);
 							if (FF_FGU->Fid->_WRITE_FILE_(Temp_Up_File,FileIOB,Once_Read_Net) < 0)
-								syslog(LOG(LOG_ERR),"FTPR_FF: Receive data had error,return value less than 0.");
+								FF_Code=-1;
 							else;
 						}
 						else
@@ -243,7 +239,7 @@ namespace FTPR{
 					// Main thread respones to open file or trunc file,this thread will close file after send over.
 
 					// Work down.
-					FF_Code=FF_UP_SUSS;	// Succeed receive.
+					FF_Code=(FF_Code == -1)?FF_UP_ERR:FF_UP_SUSS;	// Succeed receive.
 
 			
 					break;
@@ -255,23 +251,24 @@ namespace FTPR{
 					// Flag does not defined.
 
 					FF_Code=FF_BEHAVIOR_ERR;	// Error code.
-					syslog(LOG(LOG_ERR),"FTPR_FF: Behavior not defined.");
 			}
 
 
 	
 			delete[] FileIOB;	// Recycle memory.
 			FF_FGU->Tcp_Sock->_SHUTDOWN_(New_Socket,SHUT_RDWR);		// Close socket.
-			FF_FGU->Fid->_CLOSE_(FF_FGU->Fid->_Get_Latest_Open_File_());	// close file.
+	
+			// File descriptor will be closing by caller.			
+
 			pthread_exit(&FF_Code);	// quit thread.		
 	
 
 		}
 		else
 		{
+			delete[] FileIOB;	// Delete buffer.
 			// Bad socket.
 			FF_Code=FF_ACCEPT_BAD;
-			syslog(LOG(LOG_ERR),"FTPR_FF: Accept bad socket.");
 			pthread_exit(&FF_Code);
 		}
 

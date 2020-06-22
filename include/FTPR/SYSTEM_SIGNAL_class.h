@@ -23,9 +23,12 @@
 #include<signal.h>
 #include"Share_Headers.h"
 
-namespace SYS_SIGNAL{
+/*	Define model for set.	*/
+#define BLOCK_SET 1
+#define NORMAL_SET 2
+/*	End of model.	*/
 
-	enum {BLOCK_SET,NORMAL_SET};	// Define enumerate type.
+namespace SYS_SIGNAL{
 
 	class SYSTEM_SIGNAL_class{
 
@@ -35,13 +38,7 @@ namespace SYS_SIGNAL{
 			sigset_t Signal_Set;
 
 			// Signal set block.
-			sigset_t Signal_Block;
-
-			// Signal info object.When system send a signal,would append some info.
-			siginfo_t Siginfo;
-
-			// Extra info from system.
-			union sigval Sigval;	
+			sigset_t Signal_Block;	
 
 			// Signal structure.
 			struct sigaction Sigact;
@@ -80,10 +77,19 @@ namespace SYS_SIGNAL{
 			int _SIGPENDING_(sigset_t *Had_Block);
 		
 			/*	Get set.	*/
-			sigset_t _GET_LAST_SET_(void);
+			sigset_t _GET_LAST_SET_(void)
+			{
+				return Signal_Set;
+			}
 
-			/*	Get signal info.	*/
-			siginfo_t _GET_LAST_INFO_(void);
+			/*	Get the old sigaction set.	*/
+			struct sigaction _GET_LAST_SIGACTON_(void)
+			{
+				return Oldact;
+			}
+
+			/*	Get signal info.	*/	// None usage of this function,because siginfo_t object often using in sigaction function.
+//			siginfo_t _GET_LAST_INFO_(void);
 
 	};
 
