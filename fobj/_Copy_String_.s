@@ -14,7 +14,7 @@
 #	Functions :
 #		void _Copy_String_(char *Destination,const char *Source,const size_t Copy_Size);
 #		While parameters are passing,Des would be sending to RDI,Src would be sending to RSI,Copy_Size would be sending to RDX.
-#	Function will check length for destination,if length is less than Copy_Size,then only copy the length-1 bytes.
+#	
 #	Header :
 #		None.
 #
