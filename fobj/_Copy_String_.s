@@ -7,7 +7,7 @@
 #			Xx... - Normaly Symbol
 #	Description :
 #		An assembly function _Copy_String.
-#		Use the C style like this : void _Copy_String_(const char *Source,char *Destination,const size_t Copy_Size);
+#		Use the C style like this : void _Copy_String_(char *Destination,const char *Source,const size_t Copy_Size);
 #		This assembly was written for optimized processing speed up.Call method like C functions.And stack restore would be responed by caller.
 #		Function use 64bit push/pop,it's mean that 8B/unit.And function have nothing local variables so it only have the segement .text ; But in the
 #	some time,buffer length is longer than Assignment to copy,so must append a '\0' to the end.
