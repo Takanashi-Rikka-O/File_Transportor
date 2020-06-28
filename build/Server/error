@@ -1,0 +1,20 @@
+FTPR_server.cpp: In function ‘void FTPR_SERVER::_Server_Signal_Sigterm_(int, siginfo_t*, void*)’:
+FTPR_server.cpp:36:132: warning: format ‘%ld’ expects argument of type ‘long int’, but argument 4 has type ‘__pid_t {aka int}’ [-Wformat=]
+   syslog(LOG(LOG_NOTICE),"FTPR_Server: Signal %d SIGTERM received from %ld - terminate",Receive_Info->si_signo,Receive_Info->si_pid);
+                                                                                                                                    ^
+FTPR_server.cpp: In function ‘void FTPR_SERVER::_Server_Signal_Sigint_(int, siginfo_t*, void*)’:
+FTPR_server.cpp:48:131: warning: format ‘%ld’ expects argument of type ‘long int’, but argument 4 has type ‘__pid_t {aka int}’ [-Wformat=]
+   syslog(LOG(LOG_NOTICE),"FTPR_Server: Signal %d SIGINT received from %ld - terminate",Receive_Info->si_signo,Receive_Info->si_pid);
+                                                                                                                                   ^
+FTPR_server.cpp: In function ‘void FTPR_SERVER::_Server_Signal_Sighup_(int, siginfo_t*, void*)’:
+FTPR_server.cpp:56:129: warning: format ‘%ld’ expects argument of type ‘long int’, but argument 4 has type ‘__pid_t {aka int}’ [-Wformat=]
+   syslog(LOG(LOG_NOTICE),"FTPR_Server: Signal %d SIGHUP received from %ld - ignores",Receive_Info->si_signo,Receive_Info->si_pid);
+                                                                                                                                 ^
+FTPR_server.cpp: In function ‘void FTPR_SERVER::_Server_Signal_Sigalrm_(int, siginfo_t*, void*)’:
+FTPR_server.cpp:61:130: warning: format ‘%ld’ expects argument of type ‘long int’, but argument 4 has type ‘__pid_t {aka int}’ [-Wformat=]
+   syslog(LOG(LOG_NOTICE),"FTPR_Server: Signal %d SIGALRM received from %ld - ignores",Receive_Info->si_signo,Receive_Info->si_pid);
+                                                                                                                                  ^
+FTPR_server.cpp: In member function ‘bool FTPR_SERVER::FTPR_Server_class::_UP_FILE_(FTPR::FGU*, int&)’:
+FTPR_server.cpp:795:28: error: ‘F_UP_SUSS’ was not declared in this scope
+    if (**Get_Thread_Msg != F_UP_SUSS)
+                            ^

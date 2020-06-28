@@ -30,25 +30,67 @@
 
 /*	Define error code zone.	*/
 
+//	End to define,T->1,F->0.
+
 // _Read_Setting_
-#define R_GET_MEM_ERR 1
-#define R_SHARE_SET_ERR 2
-#define R_OPEN_CONFIG_ERR 3
-#define R_SET_OVER 4
-#define R_SET_ERR 5
+#define S_RS_GET_MEM_ERR 0
+#define S_RS_SHARE_SET_ERR 1
+#define S_RS_OPEN_CONFIG_ERR 2
+#define S_RS_SET_OVER 3
+#define S_RS_SET_ERR 4
 // _Read_Setting_ end
 
 // _Init_FC_
-#define Init_FC_SUSS 0
-#define Init_FID_ERR 1
-#define Init_CRE_FID_ERR 2
-#define Init_THREAD_ERR 3
-#define Init_CRE_THREAD_ERR 4
-#define Init_SOCK_ERR 5
-#define Init_CRE_SOCK_ERR 6
-#define Init_SIGNAL_ERR 7
-#define Init_CRE_SIGNAL_ERR 8
+#define S_INIT_FC_SUSS 5
+#define S_INIT_FID_ERR 6
+#define S_INIT_CRE_FID_ERR 7
+#define S_INIT_THREAD_ERR 8
+#define S_INIT_CRE_THREAD_ERR 9
+#define S_INIT_SOCK_ERR 10
+#define S_INIT_CRE_SOCK_ERR 11
+#define S_INIT_SIGNAL_ERR 12
+#define S_INIT_CRE_SIGNAL_ERR 13
 // _Init_FC_ end
+
+// Signal
+#define S_SIGALRM_ERR 14
+#define S_SIGHUP_ERR 15
+#define S_SIGINT_ERR 16
+#define S_SIGTERM_ERR 17
+
+
+// _WorkUp_
+
+#define S_BIND_ERR 18
+#define S_LISTEN_ERR 19
+
+// GET FILE
+#define S_FILE_NOTEX 20
+#define S_OPEN_FILE_F 21
+#define S_CRE_PT_F 22
+#define S_CMD_GET 23
+
+// UP FILE
+#define S_FILE_HADEX 24
+#define S_GETF_INFO_F 25
+#define S_SETF_LEN_F 26
+#define S_REVF_INFO_F 27
+#define S_GETF_LOCK_F 28
+#define S_LNK_FILE_F 29
+#define S_CMD_UP 30
+
+// CD
+#define S_CD_T 31
+#define S_CD_F 32
+#define S_CMD_CD 33
+
+// LS
+#define S_LS_T 34
+#define S_CMD_LS 35
+
+#define S_FAIL_MEM 36
+
+// _WorkUp_ end
 
 
 /*	End of error code.	*/
@@ -60,17 +102,19 @@
 #define Default_CWAITS 30
 #define Default_CPORT 4396
 #define Default_DUPORT 33242
-#define Default_RPATH "/run/ftprs"
+#define Default_RPATH "/run/ftprs"	// ftprsd must check this file if had existed.In the case of not existed,server will try to mkdir.
 
 /*	End of default setting.	*/
 
+// The server logger only respones server logs,FTPR logger respones FTPR logs.
 
+extern bool Server_Should_Not_To_Stop;
 
 namespace FTPR_SERVER{
 
 	using namespace FTPR;
 
-	bool Server_Should_Not_To_Stop(true); // Server will check this variable before next work starting.
+//	bool Server_Should_Not_To_Stop(true); // Server will check this variable before next work starting.
 
 
 /*	Signal action function defining zone.	*/
@@ -97,7 +141,7 @@ namespace FTPR_SERVER{
 
 // Define server setting structure,the structure will contains a Shared_Setting pointer in FTPR namepsace.
 
-using Server_Set=struct Server_Set_Structure{
+	using Server_Set=struct Server_Set_Structure{
 
 			struct Shared_Setting *SHS;	// This pointer point to a object of FTPR_Basic.
 			
@@ -119,10 +163,10 @@ using Server_Set=struct Server_Set_Structure{
 			/*	Private zone.	*/
 
 			/*	There define some setting variables them monapolize to server.	*/
-			char RPATH[128];		// This array will apply memory with 128B to save root path.
-			unsigned short int DUPORT;	// Option DUPORT,for file transport.
-			unsigned short int CWAITS;	// Option CWAITS,for connect timing in thread.
-			unsigned short int CPORT;	// Option CPORT,for communication with client.
+			char Root_Path[128];		// This array will apply memory with 128B to save root path.
+			unsigned short int DownUp_Port;	// Option DUPORT,for file transport.
+			unsigned short int Comm_Wait_Seconds;	// Option CWAITS,for connect timing in thread.
+			unsigned short int Comm_Port;	// Option CPORT,for communication with client.
 
 			// Define optionals in class is not a great method,because it make matter in the case of update.
 			// But at the time,use this method.In the later will resive this method.
@@ -135,20 +179,26 @@ using Server_Set=struct Server_Set_Structure{
 			
 			// Define 'ls' function.
 
-			void _LS_(const int Peer_Sock);
+			void _LS_(const int Peer_Sock,char *LS_Buffer);
 
 
 			// Define 'cd' function.
 
-			void _CD_(const char *New_Dir);
+			void _CD_(const int Peer_Sock,const char *New_Dir);
 
 			// Define 'GET File' function.
 
+			bool _GET_FILE_(FGU *T_Resource,int & Client_Socket);		// It only need parameters,a FGU object and client socket.
+
+			// Define 'UP File' function.			
 			
+			bool _UP_FILE_(FGU *T_Resource,int & Client_Socket);		// Like _GET_FILE_.
 
-			// Define 'UP File' function.
+			/*	They are can accessing all resources of this class.	*/
 
+			// Define logger.
 
+			void _Server_Logger_(const short int Which);	// Record server log.
 
 			/*	End of internal function zone.	*/
 			
@@ -168,9 +218,9 @@ using Server_Set=struct Server_Set_Structure{
 		public :
 			/*	Public zone.	*/
 
-			FTPR_Server_class():DUPORT(65535),CWAITS(3),CPORT(65534)
+			FTPR_Server_class():DownUp_Port(65535),Comm_Wait_Seconds(3),Comm_Port(65534)
 			{
-				memset(RPATH,'\0',128);
+				memset(Root_Path,'\0',128);
 			}
 			~FTPR_Server_class()
 			{
@@ -200,6 +250,17 @@ using Server_Set=struct Server_Set_Structure{
 		 *		record log,exit.
 		 *
 		*/ 
+
+			void _Server_()
+			{
+				// Start server.
+
+				if (_Server_Init_())
+				{
+					_Server_WorkUp_();
+				}
+				else;
+			}
 
 	};
 

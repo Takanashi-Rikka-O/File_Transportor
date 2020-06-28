@@ -34,11 +34,11 @@ namespace SYS_SIGNAL{
 
 		private :	// Private members.
 			
-			// Signal set object.
-			sigset_t Signal_Set;
 
+			// Signal set object.
+			sigset_t SignalSet;
 			// Signal set block.
-			sigset_t Signal_Block;	
+			sigset_t SignalBlock;	
 
 			// Signal structure.
 			struct sigaction Sigact;
@@ -61,7 +61,7 @@ namespace SYS_SIGNAL{
 			int _SIGISMEMBER_(const unsigned short int Which,int SIG);
 	
 			/*	Signal action.	*/
-			int _SIGACTION_(int SIG,void(*ACTION)(int,siginfo_t *,void *),const int FLAG);
+			int _SIGACTION_(int SIG,void(*ACTION)(int,siginfo_t *,void *),const int FLAG=0);
 			
 			/*	Suspend call.	*/
 			int _PAUSE_(void);
@@ -72,14 +72,14 @@ namespace SYS_SIGNAL{
 			int _SIGQUEUE_(pid_t PID,int SIG,const union sigval INFO);
 
 			/*	Signal block.	*/
-			int _SIGPROCMASK_(int HOW,const sigset_t *SET,sigset_t *OLDSET);
+			int _SIGPROCMASK_(int HOW,sigset_t *OLDSET);
 			// 'HOW' is effictive while the SET is not null.
 			int _SIGPENDING_(sigset_t *Had_Block);
 		
 			/*	Get set.	*/
 			sigset_t _GET_LAST_SET_(void)
 			{
-				return Signal_Set;
+				return SignalSet;
 			}
 
 			/*	Get the old sigaction set.	*/

@@ -13,7 +13,8 @@
 //	Header :
 //		Use this lib must contain "FTPR.h"
 //
-//
+//	Fix :
+//		1> Set Tcp_IO as a pointer for as quickly as parameter passing.
 //
 
 
@@ -23,7 +24,7 @@ namespace FTPR{
 
 
 	// There define some functions them are not own class.
-	
+	// Because this timer as detach model to start up,so it must record logs by itself.	
 	void *Thread_Timer(void *Arg)
 	{
 
@@ -61,6 +62,7 @@ namespace FTPR{
 
 	}
 
+	// Error logger will be recorded by _FTPR_Logger_.
 	void *Thread_FF(void *Arg)
 	{
 		short int FF_Code(FF_NO_PROBLEM);	// Error code.
@@ -136,7 +138,7 @@ namespace FTPR{
 
 
 		// Get file buffer.
-		char *FileIOB=new char[FF_FGU->Tcp_IO.Network_File_IO_Buffer];	// FBS. In heap.
+		char *FileIOB=new char[FF_FGU->Tcp_IO->Network_File_IO_Buffer];	// FBS. In heap.
 
 		// Check pointer.
 		if (NULL != FileIOB)
@@ -174,7 +176,7 @@ namespace FTPR{
 
 			// Adding new feature,when in the stage 'UP_FILE',sever call 'poll' to wait data.
 
-			switch (FF_FGU->Tcp_IO.What_Behavior)
+			switch (FF_FGU->Tcp_IO->What_Behavior)
 			{
 
 				case GET_FILE:		// Client request to get a file.
@@ -186,7 +188,7 @@ namespace FTPR{
 
 					ssize_t Once_Read_File=0;	// Record size had readed at onece.
 
-					while ((Once_Read_File=FF_FGU->Fid->_READ_FILE_(Temp_Get_File,FileIOB,FF_FGU->Tcp_IO.Network_File_IO_Buffer) > 0))
+					while ((Once_Read_File=FF_FGU->Fid->_READ_FILE_(Temp_Get_File,FileIOB,FF_FGU->Tcp_IO->Network_File_IO_Buffer) > 0))
 			 		{
 						// Write to peer.
 						if (FF_FGU->Tcp_Sock->_WRITE_SOCK_(New_Socket,FileIOB,Once_Read_File) < 0)
@@ -216,17 +218,17 @@ namespace FTPR{
 
 					// Now need not to set poll timeout,because TCP_SOCK_class will set it when it has create.
 					//FF_FGU->Tcp_Sock->_POLL_SET_(THREAD_SOCKET,POLLRDNORM,FF_FGU->Tcp_IO.Network_IO_Timeout_Value);	// Set pollfd.
-					unsigned short int Retry(FF_FGU->Tcp_IO.Retry_Number);	// Get network io retry number limit.
+					unsigned short int Retry(FF_FGU->Tcp_IO->Retry_Number);	// Get network io retry number limit.
 
 					while (FF_FGU->Tcp_Sock->_POLL_(THREAD_SOCKET) != -1 && Retry > 0)
 					{
 						if (FF_FGU->Tcp_Sock->_Check_Thread_(POLLRDNORM))	// TCP could read.
 						{
 							// Reset retry limit.
-							Retry=FF_FGU->Tcp_IO.Retry_Number;
+							Retry=FF_FGU->Tcp_IO->Retry_Number;
 							// Network io.
 							
-							Once_Read_Net=FF_FGU->Tcp_Sock->_READ_SOCK_(New_Socket,FileIOB,FF_FGU->Tcp_IO.Network_File_IO_Buffer);
+							Once_Read_Net=FF_FGU->Tcp_Sock->_READ_SOCK_(New_Socket,FileIOB,FF_FGU->Tcp_IO->Network_File_IO_Buffer);
 							if (FF_FGU->Fid->_WRITE_FILE_(Temp_Up_File,FileIOB,Once_Read_Net) < 0)
 								FF_Code=-1;
 							else;

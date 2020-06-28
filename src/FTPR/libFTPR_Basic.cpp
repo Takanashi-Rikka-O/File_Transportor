@@ -101,8 +101,9 @@ namespace FTPR{
 						Share_Set.Make_File_Mask=((Temp_Num=_Get_Number_Of_Optional_(In_Buffer)) != -1)?Temp_Num:Default_FMASK;
 					else if (0 == strncmp(In_Buffer,"RSIO",4))	// Retry network IO number.
 						Share_Set.Retry_Net_IO=((Temp_Num=_Get_Number_Of_Optional_(In_Buffer)) != -1)?Temp_Num:Default_RSIO;
-					else
-						syslog(LOG(LOG_ERR),"FTPR: This option have not be defined.");
+					else;
+
+					syslog(LOG(LOG_NOTICE),"FTPR: Read %s .",In_Buffer);
 				}
 
 				delete[] In_Buffer;	// Recycle memory.
@@ -115,7 +116,7 @@ namespace FTPR{
 				}
 				else
 				{
-					syslog(LOG(LOG_ERR),"FTPR: Detected a undefine error in the time of reading setting file.");
+					_FTPR_Logger_(FTPR_RS_F);
 					return false;
 				}
 
@@ -123,7 +124,7 @@ namespace FTPR{
 			}
 			else
 			{
-				syslog(LOG(LOG_ERR),"FTPR: Failed to get memory for setting optional.");
+				_FTPR_Logger_(FTPR_RS_MEM_F);
 				return false;
 			}
 			
@@ -131,7 +132,7 @@ namespace FTPR{
 		}
 		else
 		{
-			syslog(LOG(LOG_ERR),"FTPR: Open config file failed.");
+			_FTPR_Logger_(FTPR_RS_OPENF_F);
 			return false; // Failed to open file.
 		}
 

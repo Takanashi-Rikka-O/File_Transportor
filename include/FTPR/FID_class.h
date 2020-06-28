@@ -56,9 +56,9 @@ namespace FID{
 			char* Work_Home;	//	Current work home.
 			char* Root_Home;	//	Current root home.
 
-			long int _PATH_MAX_;	//	Path name max.
-			long int _NAME_MAX_;	//	File name max.
-			long int _OPEN_MAX_;	//	File open max.
+			unsigned long int _PATH_MAX_;	//	Path name max.
+			unsigned long int _NAME_MAX_;	//	File name max.
+			unsigned long int _OPEN_MAX_;	//	File open max.
 
 			/*	Directory.	*/
 

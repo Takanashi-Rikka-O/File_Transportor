@@ -17,7 +17,7 @@
 
 #include"THREAD_class.h"
 
-//	Attention : Some times use keyword 'inline' would make 'C' interfaces can not be called by C++ program in normally.
+//	Attention : Some times use keyword '' would make 'C' interfaces can not be called by C++ program in normally.
 
 namespace PTH{
 
@@ -29,13 +29,13 @@ namespace PTH{
 		// Init attribute object.
 		if (_INIT_ATTR_() != 0)
 		{
-			syslog(LOG(LOG_ERR),"Initialize to thread attrbute was fault!");
+
 			State_Of_Initialization_THREAD=false;	//	Fail.
 		}
 		else
 			if (_SET_DETACH_STATE_()!= 0)
 			{
-				syslog(LOG(LOG_ERR),"Set detach state for thread attrbute object was fault!");
+				syslog(LOG(LOG_ERR),"FTPR_THREAD: Set detach state for thread attrbute object was fault!");
 				State_Of_Initialization_THREAD=false;
 			}
 			else;
@@ -44,7 +44,7 @@ namespace PTH{
 
 		if (_INIT_MUTEX_() != 0)
 		{
-			syslog(LOG(LOG_ERR),"Init mutex failed.");
+			syslog(LOG(LOG_ERR),"FTPR_THREAD: Init mutex failed.");
 			State_Of_Initialization_THREAD=false;
 		}
 		else;
@@ -57,16 +57,16 @@ namespace PTH{
 		{
 
 			if (_DESTROY_ATTR_() != 0)
-				syslog(LOG(LOG_ERR),"Error,process can not destroy thread attrbute object!");
+				syslog(LOG(LOG_ERR),"FTPR_THREAD: Error,process can not destroy thread attrbute object!");
 			else;
 	
-			syslog(LOG(LOG_NOTICE),"Destroy mutex.");
+			syslog(LOG(LOG_NOTICE),"FTPR_THREAD: Destroy mutex.");
 	
 			if (_DESTROY_MUTEX_() != 0)
-				syslog(LOG(LOG_ERR),"Failed to delete mutex.");
+				syslog(LOG(LOG_ERR),"FTPR_THREAD: Failed to delete mutex.");
 			else;
 
-			syslog(LOG(LOG_INFO),"Thread object deleting!");
+			syslog(LOG(LOG_INFO),"FTPR_THREAD: Thread object deleting!");
 		}
 		else;
 	}
@@ -84,33 +84,33 @@ namespace PTH{
 		return pthread_create(TID,ATTR,WORK_FUNC,ARG);	
 	}	
 
-	inline int THREAD_class::_CANCEL_THREAD_(pthread_t TID)
+	 int THREAD_class::_CANCEL_THREAD_(pthread_t TID)
 	{
 		return pthread_cancel(TID);	//	Request to cancel a thread.
 	}
 
-	inline int THREAD_class::_DETACH_THREAD_(pthread_t TID)
+	 int THREAD_class::_DETACH_THREAD_(pthread_t TID)
 	{
 		return pthread_detach(TID);	//	Try to detach a thread.
 	}
 
-	inline int THREAD_class::_INIT_ATTR_(void)
+	 int THREAD_class::_INIT_ATTR_(void)
 	{
 		return pthread_attr_init(&Thread_Attr);	//	Initialize.
 	}
 
-	inline int THREAD_class::_DESTROY_ATTR_(void)
+	 int THREAD_class::_DESTROY_ATTR_(void)
 	{
 		return pthread_attr_destroy(&Thread_Attr);	//	Destroy.
 	}
 
-	inline int THREAD_class::_GET_DETACH_STATE_(int* DETACH_STATE)
+	 int THREAD_class::_GET_DETACH_STATE_(int* DETACH_STATE)
 	{	
 		//	Get detach state.
 		return pthread_attr_getdetachstate(&Thread_Attr,DETACH_STATE);
 	}	
 
-	inline int THREAD_class::_SET_DETACH_STATE_(int DETACH_STATE)
+	 int THREAD_class::_SET_DETACH_STATE_(int DETACH_STATE)
 	{
 		return pthread_attr_setdetachstate(&Thread_Attr,DETACH_STATE);
 	}

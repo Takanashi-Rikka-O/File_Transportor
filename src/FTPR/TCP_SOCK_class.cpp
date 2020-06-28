@@ -34,19 +34,19 @@ namespace SOCKET{
 		Main.events=Thread.events=POLLNVAL;	// Invalid event.
 
 		// Socket poll timeout.
-		Wait_IO_Time_Main=Main_Timing,Wait_IO_Time_DownUp=DownUp_Timing;
+		Wait_IO_Time_Main=Main_Timing,Wait_IO_Time_DownUp=Thread_Timing;
 
 		if (_GETHOSTNAME_(Host_Name,127) < 0)	// hostname.
 		{
 			//	On error.
-			syslog(LOG(LOG_ERR),"FTPR: Can not get hostname.");	//	Get host name.
+			syslog(LOG(LOG_ERR),"FTPR_SOCK: Can not get hostname.");	//	Get host name.
 			State_Of_Initialization_SOCK=false;
 		}
 		else
 		{
 			if ((HOSTINFO=gethostbyname(Host_Name)))	//	Get host info.
 			{
-				syslog(LOG(LOG_INFO),"FTPR: Initialization succee In SOCK.");
+				syslog(LOG(LOG_INFO),"FTPR_SOCK: Initialization succee In SOCK.");
 
 				//	Set server address in IPv4.
 
@@ -67,7 +67,7 @@ namespace SOCKET{
 					if (**SOCKETS < 0)
 					{
 						// Open socket failed.
-						syslog(LOG(LOG_ERR),"FTPR: Can not open socketm"); 	// Open failed for socket main.
+						syslog(LOG(LOG_ERR),"FTPR_SOCK: Can not open socketm"); 	// Open failed for socket main.
 						State_Of_Initialization_SOCK=false;
 						delete[] SOCKETS;
 					}
@@ -77,7 +77,7 @@ namespace SOCKET{
 						if (*(*SOCKETS+1) < 0)				// Open failed for socket thread.
 						{
 							// Open socket failed.
-							syslog(LOG(LOG_ERR),"FTPR: Can not open sockett");
+							syslog(LOG(LOG_ERR),"FTPR_SOCK: Can not open sockett");
 							_SHUTDOWN_(**SOCKETS,SHUT_RDWR);	// In there,main socket had been opened.
 							delete[] SOCKETS;
 						}
@@ -85,14 +85,14 @@ namespace SOCKET{
 						{
 							if (_SETSOCKOPT_(THREAD_SOCKET,SOL_SOCKET,SO_REUSEPORT,&Switch,sizeof(int)) < 0)
 							{
-								syslog(LOG(LOG_ERR),"FTPR: Set socket option fault.");
+								syslog(LOG(LOG_ERR),"FTPR_SOCK: Set socket option fault.");
 								State_Of_Initialization_SOCK=false;
 								delete[] SOCKETS;
 								goto TCP_SOCK_class_Quit;	// Jump to nested if-else.
 							}
 							else;
 								
-							syslog(LOG(LOG_INFO),"FTPR: Initialized for sockets.");
+							syslog(LOG(LOG_INFO),"FTPR_SOCK: Initialized for sockets.");
 
 							PORTS=new unsigned short int[1][2];	//	Get memory.
 							if (PORTS)
@@ -102,7 +102,7 @@ namespace SOCKET{
 							}
 							else
 							{
-								syslog(LOG(LOG_INFO),"FTPR: Can not get memory for ports.");
+								syslog(LOG(LOG_INFO),"FTPR_SOCK: Can not get memory for ports.");
 								_SHUTDOWN_(**SOCKETS,SHUT_RDWR);
 								_SHUTDOWN_(*(*SOCKETS+1),SHUT_RDWR);
 								delete[] SOCKETS;
@@ -114,13 +114,13 @@ namespace SOCKET{
 				}
 				else
 				{
-					syslog(LOG(LOG_ERR),"FTPR: Can not get memory for sockets.");	// This memory apply for SOCKETS.
+					syslog(LOG(LOG_ERR),"FTPR_SOCK: Can not get memory for sockets.");	// This memory apply for SOCKETS.
 					State_Of_Initialization_SOCK=false;
 				}
 			}	
 			else
 			{
-				syslog(LOG(LOG_ERR),"FTPR: Cannot get host info.");
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Cannot get host info.");
 				State_Of_Initialization_SOCK=false;	//	Initialize fault.
 			}
 				
@@ -128,7 +128,7 @@ namespace SOCKET{
 
 		TCP_SOCK_class_Quit:
 
-
+			__asm__("nop\n\t");
 	}
 
 	TCP_SOCK_class::~TCP_SOCK_class()
@@ -148,49 +148,49 @@ namespace SOCKET{
 			delete[] SOCKETS;
 			delete[] PORTS;
 			
-			syslog(LOG(LOG_INFO),"FTPR: Destroied tcp socket.");	// Log.
+			syslog(LOG(LOG_INFO),"FTPR_SOCK: Destroied tcp socket.");	// Log.
 		}
 		else
-			syslog(LOG(LOG_INFO),"FTPR: Can not destroy tcp socket,because it had not been created.");	//	Record.
+			syslog(LOG(LOG_INFO),"FTPR_SOCK: Can not destroy tcp socket,because it had not been created.");	//	Record.
 	}	
 
 
 	/*	Create socket.	*/
-	inline int TCP_SOCK_class::_SOCKET_(int FAMILY,int TYPE,int PROTOCOL)
+	 int TCP_SOCK_class::_SOCKET_(int FAMILY,int TYPE,int PROTOCOL)
 	{
 		return socket(FAMILY,TYPE,PROTOCOL);	// Server or client do not need call this function,so set it in private zone.
 	}
 
 
 	/*	Change byte order.	*/
-	inline uint16_t TCP_SOCK_class::_HTONS_(uint16_t HOST16BITVALUE)
+	 uint16_t TCP_SOCK_class::_HTONS_(uint16_t HOST16BITVALUE)
 	{
 		//	host to net.
 		return htons(HOST16BITVALUE);
 	}
 
 	/*	Change byte order.	*/
-	inline uint16_t TCP_SOCK_class::_NTOHS_(uint16_t NET16BITVALUE)
+	 uint16_t TCP_SOCK_class::_NTOHS_(uint16_t NET16BITVALUE)
 	{
 		return ntohs(NET16BITVALUE);
 	}
 
 
 	/*	Address string to net address.	*/
-	inline int TCP_SOCK_class::_INET_PTON_(int FAMILY,const char* STRPTR,void* ADDRPTR)
+	 int TCP_SOCK_class::_INET_PTON_(int FAMILY,const char* STRPTR,void* ADDRPTR)
 	{
 		return inet_pton(FAMILY,STRPTR,ADDRPTR);
 	}
 
 
 	/*	Net address to address string.	*/
-	inline const char* TCP_SOCK_class::_INET_NTOP_(int FAMILY,const void* ADDRPTR,char* STRPTR,size_t LEN)
+	 const char* TCP_SOCK_class::_INET_NTOP_(int FAMILY,const void* ADDRPTR,char* STRPTR,size_t LEN)
 	{
 		return inet_ntop(FAMILY,ADDRPTR,STRPTR,LEN);
 	}
 
 	/*	Get host info by host name.	*/
-	inline struct hostent* TCP_SOCK_class::_GETHOSTBYNAME_(const char* HOST)
+	 struct hostent* TCP_SOCK_class::_GETHOSTBYNAME_(const char* HOST)
 	{
 		return gethostbyname(HOST);
 	}
@@ -208,7 +208,7 @@ namespace SOCKET{
 				// Server bind file transport TSAP-NSAP.
 				return bind(*(*SOCKETS+1),(const struct sockaddr *)&ADDR_T,sizeof(ADDR_T)); // Bind thread.
 			default:
-				syslog(LOG(LOG_ERR),"FTPR: Bind Flag no defined.");
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Bind Flag no defined.");
 				return -2;	// Differentiate error value.
 		}
 	}
@@ -225,7 +225,7 @@ namespace SOCKET{
 				// Try to link file transport port.
 				return connect(*(*SOCKETS+1),(const struct sockaddr *)&ADDR_T,sizeof(ADDR_T));
 			default:
-				syslog(LOG(LOG_ERR),"FTPR: Connect Flag no defined.");
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Connect Flag no defined.");
 				return -2;	
 		}
 	}
@@ -241,7 +241,7 @@ namespace SOCKET{
 			case THREAD_SOCKET:
 				return accept(*(*SOCKETS+1),CLIENTADDR,ADDRLEN);
 			default:
-				syslog(LOG(LOG_ERR),"FTPR: Accept Flag no defined.");
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Accept Flag no defined.");
 				return -2;
 		}
 	}
@@ -257,7 +257,7 @@ namespace SOCKET{
 			case THREAD_SOCKET:
 				return listen(*(*SOCKETS+1),BACKLOG);
 			default:
-				syslog(LOG(LOG_ERR),"FTPR: Listen flag no defined.");
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Listen flag no defined.");
 				return -2;
 		}
 	}
@@ -265,7 +265,7 @@ namespace SOCKET{
 
 
 	/*	I/O multi-reuse.	*/
-	inline int TCP_SOCK_class::_POLL_(const short int Which_To_Wait)
+	 int TCP_SOCK_class::_POLL_(const short int Which_To_Wait)
 	{
 		// User must call this function called _POLL_SET_ before.
 		switch (Which_To_Wait)
@@ -281,7 +281,7 @@ namespace SOCKET{
 			default:
 				// The flag does not defined.Return -2.
 
-				syslog(LOG(LOG_ERR),"FTPR: Poll flag no defined.");
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Poll flag no defined.");
 				return -2;
 		}		
 	}
@@ -308,7 +308,7 @@ namespace SOCKET{
 	}
 
 	/*	Get socket option.	*/
-	inline int TCP_SOCK_class::_GETSOCKOPT_(const short int Which,int LEVEL,int OPTNAME,void* OPTVAL,socklen_t* OPTLEN)
+	 int TCP_SOCK_class::_GETSOCKOPT_(const short int Which,int LEVEL,int OPTNAME,void* OPTVAL,socklen_t* OPTLEN)
 	{
 		switch (Which)
 		{
@@ -317,13 +317,13 @@ namespace SOCKET{
 			case THREAD_SOCKET:
 				return getsockopt(*(*SOCKETS+1),LEVEL,OPTNAME,OPTVAL,OPTLEN);
 			default:
-				syslog(LOG(LOG_ERR),"FTPR: Get socket option for flag no defined.");
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Get socket option for flag no defined.");
 				return -2;
 		}
 	}
 
 	/*	Set socket option.	*/
-	inline int TCP_SOCK_class::_SETSOCKOPT_(const short int Which,int LEVEL,int OPTNAME,const void* OPTVAL,socklen_t OPTLEN)
+	 int TCP_SOCK_class::_SETSOCKOPT_(const short int Which,int LEVEL,int OPTNAME,const void* OPTVAL,socklen_t OPTLEN)
 	{
 		switch (Which)
 		{
@@ -335,13 +335,13 @@ namespace SOCKET{
 				
 				// None defined.
 				// Because the function 'setsockopt' will return -1 while it failed,so this default return -2.
-				syslog(LOG(LOG_ERR),"FTPR: Set socket option for flag no defined.");
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Set socket option for flag no defined.");
 				return -2;
 		}
 	}
 
 	/*	Get host name.	*/
-	inline int TCP_SOCK_class::_GETHOSTNAME_(char* HOSTNAME,const size_t BUFF_LEN)
+	 int TCP_SOCK_class::_GETHOSTNAME_(char* HOSTNAME,const size_t BUFF_LEN)
 	{
 		return gethostname(HOSTNAME,BUFF_LEN);
 	}
@@ -408,12 +408,12 @@ namespace SOCKET{
 			case THREAD_SOCKET:	// Get thread socket.For download and upload.
 				return *(*SOCKETS+1);
 			default:	// None defined.
-				syslog(LOG(LOG_ERR),"FTPR: Don't know which socket to get.");
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Don't know which socket to get.");
 				return -1;
 		}
 	}
 
-	inline int TCP_SOCK_class::_SHUTDOWN_(int SOCKFD,int HOWTO)
+	 int TCP_SOCK_class::_SHUTDOWN_(int SOCKFD,int HOWTO)
 	{
 			return shutdown(SOCKFD,HOWTO);
 	}

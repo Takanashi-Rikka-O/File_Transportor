@@ -80,17 +80,27 @@
 //	Main thread of Thread_FF must call 'join' wait it and receive state code from it.
 /*			End.				*/
 
+/*	Read setting error codes.	*/
+#define FTPR_RS_F 14
+#define FTPR_RS_MEM_F 15
+#define FTPR_RS_OPENF_F 16
 
+/*		End.			*/
 
 
 //	Named space.
 namespace FTPR{
 
 	/*	Extern name object.	*/
-	using FID::FID_class;			// File IO and directory.
-	using PTH::THREAD_class;		// Thread interface.
-	using SOCKET::TCP_SOCK_class;		// TCP socket interface.
-	using SYS_SIGNAL::SYSTEM_SIGNAL_class;	// System signal.
+//	using FID::FID_class;			// File IO and directory.
+//	using PTH::THREAD_class;		// Thread interface.
+//	using SOCKET::TCP_SOCK_class;		// TCP socket interface.
+//	using SYS_SIGNAL::SYSTEM_SIGNAL_class;	// System signal.
+
+using namespace FID;
+using namespace PTH;
+using namespace SOCKET;
+using namespace SYS_SIGNAL;
 
 	struct Shared_Setting{
 
@@ -162,7 +172,7 @@ namespace FTPR{
 	using NETIOINFO=struct Network_IO_Inforamtion{
 
 			// Option FBUFF.
-			unsigned short int Network_File_IO_Buffer;
+			unsigned int Network_File_IO_Buffer;
 			// What behavior hot.
 			short int What_Behavior;
 			// Retry Number.
@@ -183,7 +193,7 @@ namespace FTPR{
 			unsigned short int Timer_Timeout;	// Will use CWAITS.
 			
 			// Network io info.
-			NETIOINFO Tcp_IO;
+			NETIOINFO *Tcp_IO;
 
 			};
 
@@ -224,6 +234,7 @@ namespace FTPR{
 			virtual short int _Init_FC_(const void *SETTINGS)	// Use setting init feature classes.
 			{
 				syslog(LOG_ERR|LOG_USER,"FTPR: Don't use this virtual function to init feature classes.");
+				return 0;
 			}
 	
 			/* Command parsing. */			
@@ -231,6 +242,9 @@ namespace FTPR{
 			{
 				syslog(LOG_ERR|LOG_USER,"FTPR: Don't use this virtual function to Parsing command.");
 			}
+
+			/* FTPR Logger.	*/
+			void _FTPR_Logger_(const short int & Value);
 
 		public:
 

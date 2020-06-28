@@ -16,6 +16,8 @@
 //	Fix :
 //		1> Adjustment record format,delete extral non usage members.
 
+#include"SYSTEM_SIGNAL_class.h"
+
 namespace SYS_SIGNAL{
 
 
@@ -26,7 +28,7 @@ namespace SYS_SIGNAL{
 	SYSTEM_SIGNAL_class::SYSTEM_SIGNAL_class()
 	{
 		// Suppose the State is true.
-		State_Of_Initialization_SIGNAL=true;	
+		State_Of_Initialization_SIGNAL=true;
 
 		// Auto to initialize sigset at class creating.
 		
@@ -46,7 +48,7 @@ namespace SYS_SIGNAL{
 
 		/*	Signal action set.	*/
 
-		Sigact.sa_mask=Signal_Block;
+		Sigact.sa_mask=SignalBlock;
 		Sigact.sa_flags=0;	// Default flags.
 		Sigact.sa_flags|=SA_SIGINFO;
 		Sigact.sa_sigaction=NULL;
@@ -61,6 +63,7 @@ namespace SYS_SIGNAL{
 	{
 		// Because this class does not use any heap memory,so do not anymore.
 		syslog(LOG(LOG_INFO),"FTPR: Had deleted signal class.");	
+
 	}
 
 	// Define others method.
@@ -73,11 +76,11 @@ namespace SYS_SIGNAL{
 		{
 			case BLOCK_SET:
 				// Empty block set.
-				return sigempty(&Signal_Block);
+				return sigemptyset(&SignalBlock);
 			
 			case NORMAL_SET:
 				// Empty normaly set.
-				return sigempty(&Signal_Set);
+				return sigemptyset(&SignalSet);
 
 			default:
 				// Return 8 is means that Which had not be defined.
@@ -86,19 +89,18 @@ namespace SYS_SIGNAL{
 
 	}
 
-	int _SIGADDSET_(const unsigned short int Which,int SIG)
+	int SYSTEM_SIGNAL_class::_SIGADDSET_(const unsigned short int Which,int SIG)
 	{
 		// Adding signal to set.
 		switch (Which)
 		{
 			case BLOCK_SET:
 				// Add to block.
-				return sigaddset(&Signal_Block,SIG);
-
+				return sigaddset(&SignalBlock,SIG);
 
 			case NORMAL_SET:
 				// Add to normal.
-				return sigaddset(&Signal_Set,SIG);
+				return sigaddset(&SignalSet,SIG);
 
 			default:	
 				// If add return 8,the which had not be defined.
@@ -108,7 +110,7 @@ namespace SYS_SIGNAL{
 		}
 	}
 
-	int _SIGDELSET_(const unsigned short int Which,int SIG)
+	int SYSTEM_SIGNAL_class::_SIGDELSET_(const unsigned short int Which,int SIG)
 	{
 
 
@@ -117,20 +119,21 @@ namespace SYS_SIGNAL{
 		{
 			case BLOCK_SET:
 				// Del to block.
-				return sigdelset(&Signal_Block,SIG);
+				return sigdelset(&SignalBlock,SIG);
 
 
 			case NORMAL_SET:
 				// Del to normal.
-				return sigdelset(&Signal_Set,SIG);
+				return sigdelset(&SignalSet,SIG);
 
 			default:	
 				// If del return 8,the which had not be defined.
 				
 				return 8;
+		}
 	}
 
-	int _SIGISMEMBER_(const unsigned short int Which,int SIG)
+	int SYSTEM_SIGNAL_class::_SIGISMEMBER_(const unsigned short int Which,int SIG)
 	{
 
 		// Checking signal in set.
@@ -138,21 +141,22 @@ namespace SYS_SIGNAL{
 		{
 			case BLOCK_SET:
 				// Checking in block.
-				return sigismember(&Signal_Block,SIG);
+				return sigismember(&SignalBlock,SIG);
 
 
 			case NORMAL_SET:
 				// Checking in normal.
-				return sigismember(&Signal_Set,SIG);
+				return sigismember(&SignalSet,SIG);
 
 			default:	
 				// If Ismember return 8,the which had not be defined.
 				
 				return 8;
+		}
 	}
 
 
-	int SYSTEM_SIGNAL_class::_SIGACTION_(int SIG,void(*ACTION)(int,siginfo_t *,void *),const int FLAG)
+	int SYSTEM_SIGNAL_class::_SIGACTION_(int SIG,void(*ACTION)(int,siginfo_t *,void *),const int FLAG)	// Default.
 	{
 		Sigact.sa_flags&=FLAG;			// At first,close other flags.
 		Sigact.sa_flags|=FLAG|SA_SIGINFO;	// Open this FLAG and SA_SIGINFO.
@@ -160,33 +164,33 @@ namespace SYS_SIGNAL{
 		return sigaction(SIG,&Sigact,&Oldact);
 	}
 
-	inline int SYSTEM_SIGNAL_class::_PAUSE_(void)
+	 int SYSTEM_SIGNAL_class::_PAUSE_(void)
 	{
 		return pause();
 	}
 
-	inline int SYSTEM_SIGNAL_class::_SIGSUSPEND_(const sigset_t *SIGMASK)
+	 int SYSTEM_SIGNAL_class::_SIGSUSPEND_(const sigset_t *SIGMASK)
 	{
 		return sigsuspend(SIGMASK);
 	}
 
-	inline int SYSTEM_SIGNAL_class::_KILL_(pid_t PID,int SIG)
+	 int SYSTEM_SIGNAL_class::_KILL_(pid_t PID,int SIG)
 	{
 		return kill(PID,SIG);	// Send signal.
 	}
 
-	inline int SYSTEM_SIGNAL_class::_SIGQUEUE_(pid_t PID,int SIG,const union sigval INFO)
+	 int SYSTEM_SIGNAL_class::_SIGQUEUE_(pid_t PID,int SIG,const union sigval INFO)
 	{
 		return sigqueue(PID,SIG,INFO);	// Send signal.
 	}
 
-	inline int SYSTEM_SIGNAL_class::_SIGPROCMASK_(int HOW,const sigset_t *SET,sigset_t *OLDSET)
+	 int SYSTEM_SIGNAL_class::_SIGPROCMASK_(int HOW,sigset_t *OLDSET)
 	{
 		// Set signal block set.
-		return sigprocmask(HOW,SET,Signal,OLDSET);
+		return sigprocmask(HOW,&SignalBlock,OLDSET);
 	}
 
-	inline int SYSTEM_SIGNAL_class::_SIGPENDING_(sigset_t *Had_Block)
+	 int SYSTEM_SIGNAL_class::_SIGPENDING_(sigset_t *Had_Block)
 	{
 		return sigpending(Had_Block);
 	}
