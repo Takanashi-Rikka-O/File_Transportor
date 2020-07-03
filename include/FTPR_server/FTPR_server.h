@@ -92,23 +92,32 @@
 
 // _WorkUp_ end
 
+// Entrances
+
+#define S_ENTRY_INIT 37
+#define S_ENTRY_WORK 38
+#define S_ENTRY_DOWN 39
+#define S_ENTRY_SERVER 40
+
+// Entrances end
+
 
 /*	End of error code.	*/
 
-#define CONFIG_FILE "FTPR_server.conf"	// Configure file.
+#define CONFIG_FILE "/etc/ftprd/server/FTPR_server.conf"	// Configure file.
 
 /*	The default server setting.	*/
 
 #define Default_CWAITS 30
 #define Default_CPORT 4396
 #define Default_DUPORT 33242
-#define Default_RPATH "/run/ftprs"	// ftprsd must check this file if had existed.In the case of not existed,server will try to mkdir.
+#define Default_RPATH "/tmp"	// ftprsd must check this file if had existed.In the case of not existed,server will try to mkdir.
 
 /*	End of default setting.	*/
 
 // The server logger only respones server logs,FTPR logger respones FTPR logs.
 
-extern bool Server_Should_Not_To_Stop;
+extern bool Server_Should_Not_To_Stop;		// If define this variable in this file,translater will prompts that definition more than once for this var.
 
 namespace FTPR_SERVER{
 
@@ -255,6 +264,9 @@ namespace FTPR_SERVER{
 			{
 				// Start server.
 
+
+				_Server_Logger_(S_ENTRY_SERVER);	// Entrance log.
+		
 				if (_Server_Init_())
 				{
 					_Server_WorkUp_();

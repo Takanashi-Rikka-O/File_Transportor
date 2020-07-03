@@ -84,33 +84,33 @@ namespace PTH{
 		return pthread_create(TID,ATTR,WORK_FUNC,ARG);	
 	}	
 
-	 int THREAD_class::_CANCEL_THREAD_(pthread_t TID)
+	int THREAD_class::_CANCEL_THREAD_(pthread_t TID)
 	{
 		return pthread_cancel(TID);	//	Request to cancel a thread.
 	}
 
-	 int THREAD_class::_DETACH_THREAD_(pthread_t TID)
+	inline int THREAD_class::_DETACH_THREAD_(pthread_t TID)
 	{
 		return pthread_detach(TID);	//	Try to detach a thread.
 	}
 
-	 int THREAD_class::_INIT_ATTR_(void)
+	inline int THREAD_class::_INIT_ATTR_(void)
 	{
 		return pthread_attr_init(&Thread_Attr);	//	Initialize.
 	}
 
-	 int THREAD_class::_DESTROY_ATTR_(void)
+	inline int THREAD_class::_DESTROY_ATTR_(void)
 	{
 		return pthread_attr_destroy(&Thread_Attr);	//	Destroy.
 	}
 
-	 int THREAD_class::_GET_DETACH_STATE_(int* DETACH_STATE)
+	inline int THREAD_class::_GET_DETACH_STATE_(int* DETACH_STATE)
 	{	
 		//	Get detach state.
 		return pthread_attr_getdetachstate(&Thread_Attr,DETACH_STATE);
 	}	
 
-	 int THREAD_class::_SET_DETACH_STATE_(int DETACH_STATE)
+	inline int THREAD_class::_SET_DETACH_STATE_(int DETACH_STATE)
 	{
 		return pthread_attr_setdetachstate(&Thread_Attr,DETACH_STATE);
 	}

@@ -39,30 +39,7 @@ namespace FTPR{
 	// Clear method.
 	FTPR_Basic::~FTPR_Basic()
 	{
-		if (State_Of_Initialization_FTPR)
-		{
-			if (NULL != PTC)	// Posix thread class pointer.
-				delete PTC;
-			else;
-
-			if (NULL != FIDC)
-				delete FIDC;	// File and Directory io class pointer.
-			else;
-	
-			if (NULL != TSC)	// TCP socket class pointer.
-				delete TSC;
-			else;
-			
-			if (NULL != SYSS)	// System signal class pointer.
-				delete SYSS;
-			else;
-		
 			syslog(LOG(LOG_NOTICE),"FTPR: Basic class had destroied.");
-
-		}
-		else
-			syslog(LOG(LOG_ERR),"FTPR: Basic class does not be succeed to created.");
-
 	}
 	
 

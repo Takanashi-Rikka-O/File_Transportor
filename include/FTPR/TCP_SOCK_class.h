@@ -55,14 +55,15 @@ namespace SOCKET{
 			/*	This pointer would be pointing to a array which has two for elements.	*/
 			/*	[0] is communication port.	*/
 			/*	[1] is file transport port.	*/
-			unsigned short int (*PORTS)[2];	//	Ports pointer.
+		//	unsigned short int (*PORTS)[2];	//	Ports pointer.
+		//	Don't use this array because the class had defines two for sockaddr_in structure.
 
 			char Host_Name[128];	//	Host name.	
 	
 			struct sockaddr_in ADDR_M;	//	Address structure. IPv4.This structure built for Main thread.
 			struct sockaddr_in ADDR_T;	// 	Address structure. IPv4.This structure built for DownUp thread.
 
-			struct hostent* HOSTINFO;	//	Structure hostent pointer.
+			struct addrinfo* ADDRINFO;	//	Structure hostent pointer.
 
 			unsigned short int Wait_IO_Time_Main;	// This variable control the timeout for Main thread I/O.
 			unsigned short int Wait_IO_Time_DownUp;	// This variable control the timeout for Down/Up thread I/O.
@@ -82,7 +83,7 @@ namespace SOCKET{
 			bool State_Of_Initialization_SOCK;
 
 			// Default build.
-			TCP_SOCK_class(unsigned short int Comm_Port,unsigned short int FT_Port,unsigned short int Main_Timing,unsigned short int DownUp_Timing);
+			TCP_SOCK_class(unsigned short int Comm_Port=4396,unsigned short int FT_Port=33242,unsigned short int Main_Timing=10,unsigned short int DownUp_Timing=10);
 			~TCP_SOCK_class();	//	clear.
 
 			/*	Host byte order convertion.	*/

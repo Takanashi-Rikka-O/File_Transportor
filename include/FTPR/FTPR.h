@@ -97,10 +97,10 @@ namespace FTPR{
 //	using SOCKET::TCP_SOCK_class;		// TCP socket interface.
 //	using SYS_SIGNAL::SYSTEM_SIGNAL_class;	// System signal.
 
-using namespace FID;
-using namespace PTH;
-using namespace SOCKET;
-using namespace SYS_SIGNAL;
+using FID::FID_class;
+using PTH::THREAD_class;
+using SOCKET::TCP_SOCK_class;
+using SYS_SIGNAL::SYSTEM_SIGNAL_class;
 
 	struct Shared_Setting{
 

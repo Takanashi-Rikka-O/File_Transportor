@@ -30,14 +30,37 @@
 
 namespace FID{
 	
-	FID_class::FID_class(const char *New_Work_Home):Directory(NULL),List_Head(NULL),Current_Length_List(0),Current_Length_FDES(0)	//	Build method.
+	FID_class::FID_class(const char *New_Work_Home)	//	Build method.
 	{
+
+		/*	Before change root path,have to change currently dir path to the target path.	*/
+		/*	After change root path,then get currently path will return '/'.	*/
+		
+		/*	Memories from apply by this function all will be destroying at clear time.	*/
+
 
 		//	State
 
 		State_Of_Initialization_FID=true;	//	Suppose it's succeed.
 
-		FID_TempFile=-1;
+		// Initialize.
+		Directory=NULL;
+		List_Head=NULL;
+		Current_Length_List=0;
+		Current_Length_FDES=0;
+		Work_Home=NULL;
+		Root_Home=NULL;
+		FDES_OPENED=NULL;
+
+		if (New_Work_Home)	// Parameter must is not NULL.
+			;
+		else
+		{
+			State_Of_Initialization_FID=false;
+			return;
+		}
+
+		FID_TempFile=-1;	// This variable will save the tmpfile descriptor.
 
 		//	Get os limits.
 
@@ -52,53 +75,49 @@ namespace FID{
 		{
 			State_Of_Initialization_FID=false;
 			syslog(LOG(LOG_ERR),"FTPR_FID: Can not get mem for work path buffer.");	
+			return;
 		}
 		else
-			strncpy(Work_Home,New_Work_Home,_PATH_MAX_);
+		{
+			// If succeed to get work home memory,will invoke chdir to change directory path at first.
+			_Copy_String_(Work_Home,New_Work_Home,strlen(New_Work_Home));
+			if (! _CHDIR_(Work_Home))	// This function will keep a linked-list in memory.
+			{
+				// Failed to change directory path.
+				syslog(LOG(LOG_ERR),"FTPR_FID: Can not change directory.");
+				State_Of_Initialization_FID=false;
+				return;
+			}
+			else;
+		}
+
 		
 		Root_Home=new char[_PATH_MAX_];
 		if (! Root_Home)
 		{	
-			delete[] Work_Home;
 			State_Of_Initialization_FID=false;
 			syslog(LOG(LOG_ERR),"FTPR_FID: Can not get mem for root path buffer.");
-		}
-		else
-			strncpy(Root_Home,New_Work_Home,_PATH_MAX_);	// Root home always is work home at the time of building.
-
-		if (chroot(Root_Home) < 0)
-		{
-			syslog(LOG(LOG_ERR),"FTPR_FID: Can not change root.");
-			delete[] Work_Home;
-			State_Of_Initialization_FID=false;
-		}
-
-		// Try to change work home.
-
-		if (_CHDIR_(Work_Home))	// _CHDIR_ Will copy new path to work home.
-		{
-			syslog(LOG(LOG_INFO),"FTPR_FID: Changed work home.");
+			return;
 		}
 		else
 		{
-			delete[] Work_Home;
-			delete[] Root_Home;
-			State_Of_Initialization_FID=false;	// Error.
-			syslog(LOG(LOG_ERR),"FTPR_FID: Can not change work home.");
-		}
-
-
-		if (State_Of_Initialization_FID)
-		{	
-			FDES_OPENED=new int[_OPEN_MAX_];
-			if (! FDES_OPENED)
+			// If succeed to get root home memory,will invoke chroot to change root path at first.
+			_Copy_String_(Root_Home,Work_Home,strlen(Work_Home));
+			if (chroot(Root_Home) < 0)
 			{
-				delete[] Work_Home;
-				delete[] Root_Home;	
 				State_Of_Initialization_FID=false;
-				syslog(LOG(LOG_ERR),"FTPR_FID: Can not get mem for file descriptor array.");
+				syslog(LOG(LOG_ERR),"FTPR_FID: Failed to change root path.");
+				return;
 			}
 			else;
+		}
+
+
+		FDES_OPENED=new int[_OPEN_MAX_];
+		if (! FDES_OPENED)
+		{
+			State_Of_Initialization_FID=false;
+			syslog(LOG(LOG_ERR),"FTPR_FID: Can not get mem for file descriptor array.");
 		}
 		else;
 
@@ -107,53 +126,49 @@ namespace FID{
 	FID_class::~FID_class()	//	Clear method.
 	{
 
-		if (State_Of_Initialization_FID)	
-		{
 		/*	Recycle resource.	*/
 			
-			if (Work_Home)
-			{
-				delete[] Work_Home;
-				syslog(LOG(LOG_INFO),"FTPR_FID: Work directory path deleted.");
-			}
-			else;	
-			
-			if (Root_Home)
-			{	
-				syslog(LOG(LOG_INFO),"FTPR_FID: Root directory path deleted.");
-				delete[] Root_Home;
-			}
-			else;
-
-			if (FDES_OPENED)
-			{
-				for (int Index=0; Index < Current_Length_FDES; ++Index)
-					(void)_CLOSE_(FDES_OPENED[Index]);	// Close files them had been opened.
-				delete[] FDES_OPENED;	// Delete array.
-				syslog(LOG(LOG_INFO),"FTPR_FID: FDES Deleted.");
-			}
-			else;
-
-			if (Directory)
-			{
-				_CLOSE_DIR_();
-				syslog(LOG(LOG_INFO),"FTPR_FID: Close directory.");
-			}
-			else;
-
-			if (List_Head)
-			{
-				syslog(LOG(LOG_INFO),"FTPR_FID: Clear linked-list.");
-				_CLEAR_LIST_(List_Head);	
-			}
-			else;
-
-			_CLOSE_(FID_TempFile);	// Closing tempfile.
-
-			syslog(LOG(LOG_NOTICE),"FTPR_FID: Destroied file class.");
+		if (Work_Home)
+		{
+			delete[] Work_Home;
+			syslog(LOG(LOG_INFO),"FTPR_FID: Work directory path deleted.");
 		}
-		else
-			syslog(LOG(LOG_ERR),"FTPR_FID: Failed to delete File class because it had not created.");
+		else;	
+		
+		if (Root_Home)
+		{	
+			syslog(LOG(LOG_INFO),"FTPR_FID: Root directory path deleted.");
+			delete[] Root_Home;
+		}
+		else;
+
+		if (FDES_OPENED)
+		{
+			for (int Index=0; Index < Current_Length_FDES; ++Index)
+				(void)_CLOSE_(FDES_OPENED[Index]);	// Close files them had been opened.
+			delete[] FDES_OPENED;	// Delete array.
+			syslog(LOG(LOG_INFO),"FTPR_FID: FDES Deleted.");
+		}
+		else;
+
+		if (Directory)
+		{
+			_CLOSE_DIR_();
+			syslog(LOG(LOG_INFO),"FTPR_FID: Close directory.");
+		}
+		else;
+
+		if (List_Head)
+		{
+			syslog(LOG(LOG_INFO),"FTPR_FID: Clear linked-list.");
+			_CLEAR_LIST_(List_Head);	
+		}
+		else;
+
+		_CLOSE_(FID_TempFile);	// Closing tempfile.
+
+		syslog(LOG(LOG_NOTICE),"FTPR_FID: Destroied file class.");
+
 		
 	}
 
@@ -191,12 +206,12 @@ namespace FID{
 
 	//	File control
 
-	 void FID_class::_CLOSE_(const int CLOSE_DES)
+	void FID_class::_CLOSE_(const int CLOSE_DES)
 	{
 		(void)close(CLOSE_DES);	//	close file.
 	}
 
-	 void FID_class::_UNLINK_(const char *UNLINK_FILE)
+	void FID_class::_UNLINK_(const char *UNLINK_FILE)
 	{
 		unlink(UNLINK_FILE);	//	unlink file.
 	}
@@ -212,17 +227,17 @@ namespace FID{
 		return TempFile;
 	}
 
-	 int FID_class::_LSEEK_(const int SEEK_DES,const off_t NEW_POS,const int WHENCE)
+	int FID_class::_LSEEK_(const int SEEK_DES,const off_t NEW_POS,const int WHENCE)
 	{
 		return lseek(SEEK_DES,NEW_POS,WHENCE);	//	Seek position.
 	}
 
-	 int FID_class::_LINK_(const char *OLD,const char *NEW)
+	int FID_class::_LINK_(const char *OLD,const char *NEW)
 	{
 		return link(OLD,NEW);	//	Create hard link.
 	}
 
-	 int FID_class::_FTRUNCATE_(const int FDES,const off_t LENGTH)
+	int FID_class::_FTRUNCATE_(const int FDES,const off_t LENGTH)
 	{
 		return ftruncate(FDES,LENGTH);	//	Set file length.
 	}	
@@ -249,20 +264,20 @@ namespace FID{
 		return Stat_BUF;
 	}
 
-	 int FID_class::_RENAME_(const char *OLD_NAME,const char *NEW_NAME)
+	int FID_class::_RENAME_(const char *OLD_NAME,const char *NEW_NAME)
 	{
 		return rename(OLD_NAME,NEW_NAME);	// File rename.
 	}
 
 
 	//	Read from file.
-	 ssize_t FID_class::_READ_FILE_(const int FDES,void *BUFF,const size_t LEN)
+	ssize_t FID_class::_READ_FILE_(const int FDES,void *BUFF,const size_t LEN)
 	{
 		return read(FDES,BUFF,LEN);
 	}
 
 	//	Write to file.
-	 ssize_t FID_class::_WRITE_FILE_(const int FDES,const void *BUFF,const size_t LEN)
+	ssize_t FID_class::_WRITE_FILE_(const int FDES,const void *BUFF,const size_t LEN)
 	{
 		return write(FDES,BUFF,LEN);
 	}
@@ -304,24 +319,23 @@ namespace FID{
 		return Directory?true:false;	
 	}
 
-	 struct dirent* FID_class::_READ_DIR_(void)
+	inline struct dirent* FID_class::_READ_DIR_(void)
 	{
 		return readdir(Directory);	//	Return static memory.
 	}
 
-	 void FID_class::_REWIND_DIR_(void)
+	inline void FID_class::_REWIND_DIR_(void)
 	{
 		rewinddir(Directory);	//	Reset dir position.
 	}
 
-	 void FID_class::_CLOSE_DIR_(void)
+	inline void FID_class::_CLOSE_DIR_(void)
 	{
 		if (Directory)
 			if (0 == closedir(Directory))	//	Close directory.
 				Directory=NULL;
 			else
-				syslog(LOG(LOG_ERR),"FTPR_FID: Close directory was fault.");
-			
+				syslog(LOG(LOG_ERR),"FTPR_FID: Close directory was fault.");	
 		else;
 	}
 	

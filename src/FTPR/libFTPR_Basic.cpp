@@ -63,6 +63,10 @@ namespace FTPR{
 			for (int Base(1); The_End != The_Equal; --The_End,Base*=10)
 				Result+=(*The_End-'0')*Base;
 
+		#ifdef DEBUG
+			syslog(LOG(LOG_NOTICE),"FTPR: Option : %s Get Number : %d .",Option,Result);
+		#endif
+
 		return Result;	// Return number.
 	}	
 
@@ -71,6 +75,8 @@ namespace FTPR{
 	bool FTPR_Basic::_Read_Shared_Setting_(const char *Setting_File)
 	{
 		// Don't check this pointer because server and client will check it in the order at front.
+
+
 
 	
 		ifstream Read;	// Declare a file io object.
@@ -87,9 +93,20 @@ namespace FTPR{
 
 			if (In_Buffer)
 			{
-				while (Read.getline(In_Buffer,65) && ! Read.fail())	// Cycle to read setting,if detected error,using default.
+				while (true)	// Cycle to read setting,if detected error,using default.
 				{
-					if (*In_Buffer == '#')
+					Read.getline(In_Buffer,65);	// Because reader does not use one character guess,so it is possible cause error.
+
+					if (Read.eof())
+						break;
+					else if (Read.fail())
+					{
+						Read.clear();
+						continue;
+					}
+					else;
+
+					if (*In_Buffer == '#' || *In_Buffer == '\0')
 						continue;
 					else if (0 == strncmp(In_Buffer,"NIOTIMEOUT",10))	// Network IO timeout in thread.
 						Share_Set.Network_IO_Timeout=((Temp_Num=_Get_Number_Of_Optional_(In_Buffer)) != -1)?Temp_Num:Default_NIOTIMEOUT;
@@ -103,19 +120,23 @@ namespace FTPR{
 						Share_Set.Retry_Net_IO=((Temp_Num=_Get_Number_Of_Optional_(In_Buffer)) != -1)?Temp_Num:Default_RSIO;
 					else;
 
-					syslog(LOG(LOG_NOTICE),"FTPR: Read %s .",In_Buffer);
 				}
 
 				delete[] In_Buffer;	// Recycle memory.
 	
 				if (Read.eof())
 				{
+						
+				#ifdef DEBUG
+					syslog(LOG(LOG_NOTICE),"FTPR: EOF.");
+				#endif
 					Read.clear();
 					Read.close();
 					return true;
 				}
 				else
 				{
+					syslog(LOG(LOG_NOTICE),"FTPR: FAIL Config.");
 					_FTPR_Logger_(FTPR_RS_F);
 					return false;
 				}

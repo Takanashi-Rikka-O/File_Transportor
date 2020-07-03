@@ -35,13 +35,13 @@ namespace SYS_SIGNAL{
 		if (_SIGEMPTYSET_(BLOCK_SET) < 0)
 		{
 			// Set normaly set was fault.
-			syslog(LOG(LOG_ERR),"FTPR: Can not empty signal block set.");
+			syslog(LOG(LOG_ERR),"FTPR_SIGNAL: Can not empty signal block set.");
 			State_Of_Initialization_SIGNAL=false;
 		}
 		else
 			if (_SIGEMPTYSET_(NORMAL_SET) < 0)
 			{
-				syslog(LOG(LOG_ERR),"FTPR: Can not empty signal normaly set.");
+				syslog(LOG(LOG_ERR),"FTPR_SIGNAL: Can not empty signal normaly set.");
 				State_Of_Initialization_SIGNAL=false;
 			}
 			else;
@@ -50,20 +50,19 @@ namespace SYS_SIGNAL{
 
 		Sigact.sa_mask=SignalBlock;
 		Sigact.sa_flags=0;	// Default flags.
-		Sigact.sa_flags|=SA_SIGINFO;
+		Sigact.sa_flags|=SA_SIGINFO;	// Always receive the extended information.
 		Sigact.sa_sigaction=NULL;
 
 		/*	Record log.		*/
 
-		syslog(LOG(LOG_NOTICE),"FTPR: Had created a signal class.");
+		syslog(LOG(LOG_NOTICE),"FTPR_SIGNAL: Had created a signal class.");
 
 	}
 	
 	SYSTEM_SIGNAL_class::~SYSTEM_SIGNAL_class()
 	{
 		// Because this class does not use any heap memory,so do not anymore.
-		syslog(LOG(LOG_INFO),"FTPR: Had deleted signal class.");	
-
+		syslog(LOG(LOG_INFO),"FTPR_SIGNAL: Had deleted signal class.");	
 	}
 
 	// Define others method.
@@ -164,33 +163,33 @@ namespace SYS_SIGNAL{
 		return sigaction(SIG,&Sigact,&Oldact);
 	}
 
-	 int SYSTEM_SIGNAL_class::_PAUSE_(void)
+	inline int SYSTEM_SIGNAL_class::_PAUSE_(void)
 	{
 		return pause();
 	}
 
-	 int SYSTEM_SIGNAL_class::_SIGSUSPEND_(const sigset_t *SIGMASK)
+	inline int SYSTEM_SIGNAL_class::_SIGSUSPEND_(const sigset_t *SIGMASK)
 	{
 		return sigsuspend(SIGMASK);
 	}
 
-	 int SYSTEM_SIGNAL_class::_KILL_(pid_t PID,int SIG)
+	inline int SYSTEM_SIGNAL_class::_KILL_(pid_t PID,int SIG)
 	{
 		return kill(PID,SIG);	// Send signal.
 	}
 
-	 int SYSTEM_SIGNAL_class::_SIGQUEUE_(pid_t PID,int SIG,const union sigval INFO)
+	inline int SYSTEM_SIGNAL_class::_SIGQUEUE_(pid_t PID,int SIG,const union sigval INFO)
 	{
 		return sigqueue(PID,SIG,INFO);	// Send signal.
 	}
 
-	 int SYSTEM_SIGNAL_class::_SIGPROCMASK_(int HOW,sigset_t *OLDSET)
+	inline int SYSTEM_SIGNAL_class::_SIGPROCMASK_(int HOW,sigset_t *OLDSET)
 	{
 		// Set signal block set.
 		return sigprocmask(HOW,&SignalBlock,OLDSET);
 	}
 
-	 int SYSTEM_SIGNAL_class::_SIGPENDING_(sigset_t *Had_Block)
+	inline int SYSTEM_SIGNAL_class::_SIGPENDING_(sigset_t *Had_Block)
 	{
 		return sigpending(Had_Block);
 	}

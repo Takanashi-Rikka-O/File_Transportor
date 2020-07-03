@@ -6,6 +6,11 @@
 # Hint message for none specify target.
 all:Hint_Message
 
+# Makefile variables
+CONFIGUREDIR=/etc/ftprd
+C_CONFIGUREDIR=$(CONFIGUREDIR)/client
+S_CONFIGUREDIR=$(CONFIGUREDIR)/server
+
 # Translater option.
 
 CC=g++
@@ -32,11 +37,19 @@ $(ALLOBJS):%.o:%.cpp
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 Hint_Message:
-	@echo "Please specify target : clean/server/client"
+	@echo "Please specify target : clean/server/client/destory"
 
 server:$(ServerDeps) $(ShareLib) $(AsmOBJ) $(CommonDeps)
-	$(CC) $(CFLAGS) -o $@ $(ServerDeps) $(CommonDeps) $(AsmOBJ) -lFTPR_Basic -lFTPR_THREAD -lpthread
+	$(CC) $(CFLAGS) -o ftprsd $(ServerDeps) $(CommonDeps) $(AsmOBJ) -lFTPR_Basic -lFTPR_THREAD -lpthread
 	ldconfig
+	@if [ ! -e $(CONFIGUREDIR) ]; \
+	then \
+		mkdir $(CONFIGUREDIR); \
+		mkdir $(C_CONFIGUREDIR); \
+		mkdir $(S_CONFIGUREDIR); \
+	fi
+	cp FTPR_client.conf $(C_CONFIGUREDIR)
+	cp FTPR_server.conf $(S_CONFIGUREDIR)
 
 $(AsmOBJ):_Copy_String_.s
 	as --gstabs -o $@ $<
@@ -54,6 +67,6 @@ clean:
 
 # Pay a notice on there,do not adding option '-r' for 'rm'.
 destroy:
-	@rm -f /usr/lib/libFTPR_Basic.so /usr/lib/libFTPR_THREAD.so
+	@rm --interactive /usr/lib/libFTPR_Basic.so /usr/lib/libFTPR_THREAD.so
 
 

@@ -25,9 +25,11 @@ namespace SOCKET{
 	{
 		//	Suppose the state was succeed.
 		State_Of_Initialization_SOCK=true;
+		ADDRINFO=NULL;
+		SOCKETS=NULL;
 
 		// Open option.
-		int Switch(1);
+		int Switch(1);	// For socket option.
 
 		// Initialize the main and thread structure.
 		Main.fd=Thread.fd=-1;
@@ -36,27 +38,45 @@ namespace SOCKET{
 		// Socket poll timeout.
 		Wait_IO_Time_Main=Main_Timing,Wait_IO_Time_DownUp=Thread_Timing;
 
+		// Control to get address infomation.
+		struct addrinfo Control={
+				.ai_flags=0,		// Default.
+				.ai_family=AF_INET,	// Internet address.
+				.ai_socktype=SOCK_RAW,	// Normaly socket.
+				.ai_protocol=IPPROTO_IP, // IP.
+				.ai_addrlen=0,
+				.ai_addr=NULL,
+				.ai_canonname=NULL,
+				.ai_next=NULL
+			};
+
+		int Returninfo(0);
+
+
 		if (_GETHOSTNAME_(Host_Name,127) < 0)	// hostname.
 		{
 			//	On error.
-			syslog(LOG(LOG_ERR),"FTPR_SOCK: Can not get hostname.");	//	Get host name.
+			syslog(LOG(LOG_ERR),"FTPR_SOCK: Can not get hostname. Host Name : %s .",Host_Name);	//	Get host name.
 			State_Of_Initialization_SOCK=false;
 		}
 		else
 		{
-			if ((HOSTINFO=gethostbyname(Host_Name)))	//	Get host info.
+			if ((Returninfo=getaddrinfo("localhost",NULL,&Control,&ADDRINFO)) == 0)	//	Get host info.
 			{
-				syslog(LOG(LOG_INFO),"FTPR_SOCK: Initialization succee In SOCK.");
+				syslog(LOG(LOG_NOTICE),"FTPR_SOCK: Initialization succee init SOCK.");
+				syslog(LOG(LOG_NOTICE),"FTPR_SOCK: Host : %s  IP : %s .",Host_Name,inet_ntoa(((struct sockaddr_in *)ADDRINFO->ai_addr)->sin_addr));
 
 				//	Set server address in IPv4.
 
-				ADDR_M.sin_family=HOSTINFO->h_addrtype;	//	Host ip family.
-				ADDR_M.sin_addr=*(struct in_addr*)*(HOSTINFO->h_addr_list);	//	Currently host IPv4 address.
-				//ADDR.sin_port=_HTONS_(TSAP);	//	Transport service access point. The port must read from file.
-			
-				//	End.
-
+				ADDR_M.sin_family=ADDRINFO->ai_family;	//	Host ip family.
+				ADDR_M.sin_addr=((struct sockaddr_in *)ADDRINFO->ai_addr)->sin_addr;	//	Currently host IPv4 address.
+		
+				// Use same family and address.
 				ADDR_T=ADDR_M;	// Structure assignement.But port had not assigned.
+
+				// Assign ports.
+				ADDR_M.sin_port=_HTONS_(Comm_Port);
+				ADDR_T.sin_port=_HTONS_(FT_Port);
 
 
 				SOCKETS=new int[1][2];		//	Get memory.	
@@ -67,9 +87,9 @@ namespace SOCKET{
 					if (**SOCKETS < 0)
 					{
 						// Open socket failed.
-						syslog(LOG(LOG_ERR),"FTPR_SOCK: Can not open socketm"); 	// Open failed for socket main.
+						// Open failed for socket main.
+						syslog(LOG(LOG_ERR),"FTPR_SOCK: Can not open socket for communication."); 
 						State_Of_Initialization_SOCK=false;
-						delete[] SOCKETS;
 					}
 					else
 					{
@@ -77,37 +97,20 @@ namespace SOCKET{
 						if (*(*SOCKETS+1) < 0)				// Open failed for socket thread.
 						{
 							// Open socket failed.
-							syslog(LOG(LOG_ERR),"FTPR_SOCK: Can not open sockett");
-							_SHUTDOWN_(**SOCKETS,SHUT_RDWR);	// In there,main socket had been opened.
-							delete[] SOCKETS;
+							syslog(LOG(LOG_ERR),"FTPR_SOCK: Can not open socket for file transfer.");
+							State_Of_Initialization_SOCK=false;
 						}
 						else
 						{
+							// Socket reuse immediately.
 							if (_SETSOCKOPT_(THREAD_SOCKET,SOL_SOCKET,SO_REUSEPORT,&Switch,sizeof(int)) < 0)
 							{
 								syslog(LOG(LOG_ERR),"FTPR_SOCK: Set socket option fault.");
 								State_Of_Initialization_SOCK=false;
-								delete[] SOCKETS;
-								goto TCP_SOCK_class_Quit;	// Jump to nested if-else.
 							}
-							else;
-								
-							syslog(LOG(LOG_INFO),"FTPR_SOCK: Initialized for sockets.");
+							else	
+								syslog(LOG(LOG_INFO),"FTPR_SOCK: Initialized for sockets.");
 
-							PORTS=new unsigned short int[1][2];	//	Get memory.
-							if (PORTS)
-							{
-								**PORTS=Comm_Port;	// Communication.
-								*(*PORTS+1)=FT_Port;	// File transfer.
-							}
-							else
-							{
-								syslog(LOG(LOG_INFO),"FTPR_SOCK: Can not get memory for ports.");
-								_SHUTDOWN_(**SOCKETS,SHUT_RDWR);
-								_SHUTDOWN_(*(*SOCKETS+1),SHUT_RDWR);
-								delete[] SOCKETS;
-								State_Of_Initialization_SOCK=false;	
-							}
 						}
 					}
 
@@ -120,77 +123,97 @@ namespace SOCKET{
 			}	
 			else
 			{
-				syslog(LOG(LOG_ERR),"FTPR_SOCK: Cannot get host info.");
+
+		
+			#ifdef DEBUG
+				syslog(LOG(LOG_ERR),"Code : %d .",Returninfo);
+				syslog(LOG(LOG_ERR),"EAI_ADDRFAMILY : %d."EAI_ADDRFAMILY);
+				syslog(LOG(LOG_ERR),"EAI_AGAIN : %d.",EAI_AGAIN);
+				syslog(LOG(LOG_ERR),"EAI_BADFLAGS : %d.",EAI_BADFLAGS);
+				syslog(LOG(LOG_ERR),"EAI_FAIL : %d.",EAI_FAIL);
+				syslog(LOG(LOG_ERR),"EAI_FAMILY : %d.",EAI_FAMILY);
+				syslog(LOG(LOG_ERR),"EAI_MEMORY : %d.",EAI_MEMORY);
+				syslog(LOG(LOG_ERR),"EAI_NODATA : %d.",EAI_NODATA);
+				syslog(LOG(LOG_ERR),"EAI_NONAME : %d.",EAI_NONAME);
+				syslog(LOG(LOG_ERR),"EAI_SERVICE : %d.",EAI_SERVICE);
+				syslog(LOG(LOG_ERR),"EAI_SOCKTYPE : %d.",EAI_SOCKTYPE);
+				syslog(LOG(LOG_ERR),"EAI_SYSTEM : %d.",EAI_SYSTEM);
+			#endif
+
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Cannot get %s\'info Code : %d.",Host_Name,Returninfo);
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: ADDRINFO is %p.",ADDRINFO);
 				State_Of_Initialization_SOCK=false;	//	Initialize fault.
 			}
 				
 		}
 
-		TCP_SOCK_class_Quit:
-
-			__asm__("nop\n\t");
+	
 	}
 
 	TCP_SOCK_class::~TCP_SOCK_class()
 	{
-		if (State_Of_Initialization_SOCK)
+		if (ADDRINFO)	// If it is not null,then clear linked-list.
+		{
+			freeaddrinfo(ADDRINFO);
+			syslog(LOG(LOG_NOTICE),"FTPR_SOCK: Clear node info.");
+		}
+		else;
+
+		if (SOCKETS)
 		{
 			//	Close sockets.
 			if (**SOCKETS > 0)
 				(void)_SHUTDOWN_(**SOCKETS,SHUT_RDWR);
 			else;
-
+	
 			if (*(*SOCKETS+1) > 0)
 				(void)_SHUTDOWN_((*SOCKETS)[1],SHUT_RDWR);
 			else;
 
 			//	Recycle resource.
 			delete[] SOCKETS;
-			delete[] PORTS;
-			
-			syslog(LOG(LOG_INFO),"FTPR_SOCK: Destroied tcp socket.");	// Log.
 		}
-		else
-			syslog(LOG(LOG_INFO),"FTPR_SOCK: Can not destroy tcp socket,because it had not been created.");	//	Record.
+			
+		syslog(LOG(LOG_INFO),"FTPR_SOCK: Destroied tcp socket.");	// Log.
 	}	
 
 
 	/*	Create socket.	*/
-	 int TCP_SOCK_class::_SOCKET_(int FAMILY,int TYPE,int PROTOCOL)
+	int TCP_SOCK_class::_SOCKET_(int FAMILY,int TYPE,int PROTOCOL)
 	{
 		return socket(FAMILY,TYPE,PROTOCOL);	// Server or client do not need call this function,so set it in private zone.
 	}
 
 
 	/*	Change byte order.	*/
-	 uint16_t TCP_SOCK_class::_HTONS_(uint16_t HOST16BITVALUE)
+	uint16_t TCP_SOCK_class::_HTONS_(uint16_t HOST16BITVALUE)
 	{
 		//	host to net.
 		return htons(HOST16BITVALUE);
 	}
 
 	/*	Change byte order.	*/
-	 uint16_t TCP_SOCK_class::_NTOHS_(uint16_t NET16BITVALUE)
+	uint16_t TCP_SOCK_class::_NTOHS_(uint16_t NET16BITVALUE)
 	{
 		return ntohs(NET16BITVALUE);
 	}
 
 
 	/*	Address string to net address.	*/
-	 int TCP_SOCK_class::_INET_PTON_(int FAMILY,const char* STRPTR,void* ADDRPTR)
+	int TCP_SOCK_class::_INET_PTON_(int FAMILY,const char* STRPTR,void* ADDRPTR)
 	{
 		return inet_pton(FAMILY,STRPTR,ADDRPTR);
 	}
 
 
 	/*	Net address to address string.	*/
-	 const char* TCP_SOCK_class::_INET_NTOP_(int FAMILY,const void* ADDRPTR,char* STRPTR,size_t LEN)
+	const char* TCP_SOCK_class::_INET_NTOP_(int FAMILY,const void* ADDRPTR,char* STRPTR,size_t LEN)
 	{
 		return inet_ntop(FAMILY,ADDRPTR,STRPTR,LEN);
 	}
 
 	/*	Get host info by host name.	*/
-	 struct hostent* TCP_SOCK_class::_GETHOSTBYNAME_(const char* HOST)
+	struct hostent* TCP_SOCK_class::_GETHOSTBYNAME_(const char* HOST)
 	{
 		return gethostbyname(HOST);
 	}
@@ -341,7 +364,7 @@ namespace SOCKET{
 	}
 
 	/*	Get host name.	*/
-	 int TCP_SOCK_class::_GETHOSTNAME_(char* HOSTNAME,const size_t BUFF_LEN)
+	inline int TCP_SOCK_class::_GETHOSTNAME_(char* HOSTNAME,const size_t BUFF_LEN)
 	{
 		return gethostname(HOSTNAME,BUFF_LEN);
 	}
@@ -413,7 +436,7 @@ namespace SOCKET{
 		}
 	}
 
-	 int TCP_SOCK_class::_SHUTDOWN_(int SOCKFD,int HOWTO)
+	inline int TCP_SOCK_class::_SHUTDOWN_(int SOCKFD,int HOWTO)
 	{
 			return shutdown(SOCKFD,HOWTO);
 	}

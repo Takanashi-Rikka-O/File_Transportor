@@ -28,14 +28,6 @@
 
 #include"Share_Headers.h"
 
-extern "C"{
-
-	int pthread_join(pthread_t,void **);
-	int pthread_create(pthread_t *,const pthread_attr_t *,void*(*)(void *),void *);
-	int pthread_detach(pthread_t);
-}
-
-
 
 namespace PTH{
 
@@ -56,8 +48,6 @@ namespace PTH{
 			pthread_attr_t Thread_Attr;	//	POSIX Thread attrbute object.
 
 			pthread_mutex_t Thread_Mutex;	//	POSIX Thread mutex lock.
-
-
 
 			pthread_t _GET_ID_SELF_(void);			//	Thread call this function to get ID of itself.
 

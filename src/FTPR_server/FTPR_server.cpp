@@ -18,6 +18,7 @@
 //		1> Make command work code as models.
 //		2> Delete retry for init.
 //		3> Make a server logger to record all logs.
+//		4> Fix the TCP class failed to init.
 
 
 #include"FTPR_server.h"
@@ -33,7 +34,7 @@ namespace FTPR_SERVER{
 
 	void _Server_Signal_Sigterm_(int Sig,siginfo_t *Receive_Info,void *Content)
 	{
-		syslog(LOG(LOG_NOTICE),"FTPR_Server: Signal %d SIGTERM received from %ld - terminate",Receive_Info->si_signo,Receive_Info->si_pid);
+		syslog(LOG(LOG_NOTICE),"FTPR_Server: Signal %d SIGTERM received from %u - terminate",Receive_Info->si_signo,Receive_Info->si_pid);
 
 		// How to stop server,a simple method is declare a global variable.
 		// And in the code,only this function to changed it.
@@ -45,7 +46,7 @@ namespace FTPR_SERVER{
 
 	void _Server_Signal_Sigint_(int Sig,siginfo_t *Receive_Info,void *Content)
 	{
-		syslog(LOG(LOG_NOTICE),"FTPR_Server: Signal %d SIGINT received from %ld - terminate",Receive_Info->si_signo,Receive_Info->si_pid);
+		syslog(LOG(LOG_NOTICE),"FTPR_Server: Signal %d SIGINT received from %u - terminate",Receive_Info->si_signo,Receive_Info->si_pid);
 	
 		union sigval INFO={.sival_int=1};	// union.
 		sigqueue(getpid(),SIGTERM,INFO);	// Send SIGTERM to itself.
@@ -53,12 +54,12 @@ namespace FTPR_SERVER{
 
 	void _Server_Signal_Sighup_(int Sig,siginfo_t *Receive_Info,void *Content)
 	{
-		syslog(LOG(LOG_NOTICE),"FTPR_Server: Signal %d SIGHUP received from %ld - ignores",Receive_Info->si_signo,Receive_Info->si_pid);
+		syslog(LOG(LOG_NOTICE),"FTPR_Server: Signal %d SIGHUP received from %u - ignores",Receive_Info->si_signo,Receive_Info->si_pid);
 	}
 
 	void _Server_Signal_Sigalrm_(int Sig,siginfo_t *Receive_Info,void *Content)
 	{
-		syslog(LOG(LOG_NOTICE),"FTPR_Server: Signal %d SIGALRM received from %ld - ignores",Receive_Info->si_signo,Receive_Info->si_pid);
+		syslog(LOG(LOG_NOTICE),"FTPR_Server: Signal %d SIGALRM received from %u - ignores",Receive_Info->si_signo,Receive_Info->si_pid);
 	}
 
 
@@ -79,7 +80,7 @@ namespace FTPR_SERVER{
 
 
 		// Get reading buffer.
-		char *Setting_Buffer=new char[64];	// 64B.
+		char *Setting_Buffer=new char[64+1];	// 64B.
 		if (! Setting_Buffer)
 		{
 			_Read_Setting_Code=S_RS_GET_MEM_ERR;	
@@ -121,12 +122,20 @@ namespace FTPR_SERVER{
 
 		// Entry a cycle to read unique setting optionals.
 		// Stop while fail bit set out.
-		while (! Read.fail())
+		while (true)
 		{
-			// Line to read.
-			Read.getline(Setting_Buffer,64);
-				
-			if ('#' == *Setting_Buffer) // Skip comment.
+
+			Read.getline(Setting_Buffer,65);	// Read 64B
+			if (Read.eof())	// If eof,break cycle.
+				break;
+			else if (Read.fail())	// This case is normaly to be caused by left characters in stream but had readed the max limit.
+			{
+				Read.clear();
+				continue;
+			}
+			else;
+
+			if ('#' == *Setting_Buffer || '\0' == *Setting_Buffer) // Skip comment.
 				continue;
 			else
 			{
@@ -172,15 +181,93 @@ namespace FTPR_SERVER{
 		const Server_Set *Init_Set=(const Server_Set *)SETTINGS;
 	
 		// Error code return variable.
-		short int Init_Code(S_INIT_FC_SUSS);	
+		short int Init_Code(-1);	
 	
 		// Set umask.
 		umask(Init_Set->SHS->Make_File_Mask);
 
 		// And then create class objects and check init status.
-	
+
+
+
+
+		// After create feature classes.
+		// 1> PTC.
+		PTC=new THREAD_class;
+		if (PTC)
+			if (PTC->State_Of_Initialization_THREAD)
+				;
+			else
+			{
+				Init_Code=S_INIT_THREAD_ERR;	// Failed to init.
+				goto INIT_QUIT;
+			}
+		else
+		{
+			Init_Code=S_INIT_CRE_THREAD_ERR;
+			goto INIT_QUIT;
+		}
+
+		// 2> TSC.
+		TSC=new TCP_SOCK_class(Init_Set->CPT,Init_Set->DUP,Init_Set->SHS->Network_IO_Timeout,Init_Set->SHS->Network_IO_Timeout);
+		if (TSC)
+		{
+			if (TSC->State_Of_Initialization_SOCK)
+				;
+			else
+			{
+				Init_Code=S_INIT_SOCK_ERR;
+				goto INIT_QUIT;
+			}
+		}
+		else
+		{
+			Init_Code=S_INIT_CRE_SOCK_ERR;
+			goto INIT_QUIT;
+		}
+
+		// 3> SYSS.
+		SYSS=new SYSTEM_SIGNAL_class;
+		if (SYSS)
+			if (SYSS->State_Of_Initialization_SIGNAL)
+				;
+			else
+			{
+				Init_Code=S_INIT_SIGNAL_ERR;
+				goto INIT_QUIT;
+			}
+		else
+		{
+			Init_Code=S_INIT_CRE_SIGNAL_ERR;
+			goto INIT_QUIT;
+		}
+
+		// 4> FIDC.
+		FIDC=new FID_class(Init_Set->Root_Path);	// Try to make a FID class.
+		if (FIDC)
+			if (FIDC->State_Of_Initialization_FID)	// Check if sure to be initialized.
+				;
+			else
+			{
+				Init_Code=S_INIT_FID_ERR;	// Failed to init.
+				goto INIT_QUIT;
+			}
+		else
+		{
+			Init_Code=S_INIT_CRE_FID_ERR;		// Failed to create.
+			goto INIT_QUIT;
+		}
+
+
+		Init_Code=S_INIT_FC_SUSS;	// Success.We want it process to there and no any error.
+
+
+		/*	For this long instend if-else cause a bug:
+ 				The class TCP_SOCK_class always failed to init.But if create and init it before this structure,the program is normaly to work.
+			I think is the translater optimize this structure make the bug.But also,use this style use if-else is not a good idea.
+		*/
 		// Create FID.
-		FIDC=new FID_class(Init_Set->Root_Path);
+/*		FIDC=new FID_class(Init_Set->Root_Path);
 		// Check status.
 		if (FIDC)
 			if (FIDC->State_Of_Initialization_FID)
@@ -251,14 +338,18 @@ namespace FTPR_SERVER{
 
 		INIT_LABEL1:	
 			delete SYSS;
+			SYSS=NULL;
 		INIT_LABEL2:	
 			delete TSC;
+			TSC=NULL;
 		INIT_LABEL3:
 			delete PTC;
+			PTC=NULL;
 		INIT_LABEL4:
 			delete FIDC;
+			FIDC=NULL;
 
-
+*/
 		INIT_QUIT:
 
 			return Init_Code;
@@ -296,6 +387,9 @@ namespace FTPR_SERVER{
 
 	bool FTPR_Server_class::_Server_Init_(void)
 	{
+
+		_Server_Logger_(S_ENTRY_INIT);	// Entrance record.
+
 		bool _Server_Init_Status_(true);	// Suppose it's succeed.
 		short int Return_Function(0);	// For record return value.
 		Server_Set Server_Set_Config={.SHS=&Share_Set};	// Share set.
@@ -352,6 +446,8 @@ namespace FTPR_SERVER{
 
 		_Server_Logger_(Return_Function);
 
+		syslog(LOG(LOG_NOTICE),"FTPR_Server: Finished init.");
+
 		return _Server_Init_Status_;
 
 	}
@@ -360,6 +456,9 @@ namespace FTPR_SERVER{
 
 	void FTPR_Server_class::_Server_WorkUp_(void)
 	{
+	
+		_Server_Logger_(S_ENTRY_WORK);	// Entrance record.
+		
 		char *UserCmd(NULL);
 		try{
 			// For command buffer.
@@ -526,6 +625,9 @@ namespace FTPR_SERVER{
 
 	void FTPR_Server_class::_Server_Shutdown_(void)
 	{
+		
+		_Server_Logger_(S_ENTRY_DOWN);
+
 		// The destroy working will be responing by their clear method.
 
 		if (FIDC)
@@ -542,8 +644,8 @@ namespace FTPR_SERVER{
 		else;
 		if (TSC)
 		{
-			syslog(LOG(LOG_NOTICE),"FTPR_Server: Delete Socket obj.");
 			delete TSC;
+			syslog(LOG(LOG_NOTICE),"FTPR_Server: Delete Socket obj.");
 		}
 		else;
 		if (SYSS)
@@ -1005,6 +1107,24 @@ namespace FTPR_SERVER{
 
 			case S_CRE_PT_F:
 				_Copy_String_(LogMsg,"FTPR_Server: Failed to start posix thread.",42);
+				break;
+
+			// Entrance
+
+			case S_ENTRY_INIT:
+				_Copy_String_(LogMsg,"FTPR_Server: Reached target server init.",40);
+				break;
+
+			case S_ENTRY_WORK:
+				_Copy_String_(LogMsg,"FTPR_Server: Reached target server work.",40);
+				break;
+
+			case S_ENTRY_DOWN:
+				_Copy_String_(LogMsg,"FTPR_Server: Reached target server down.",40);
+				break;
+
+			case S_ENTRY_SERVER:
+				_Copy_String_(LogMsg,"FTPR_Server: Reached target server start.",41);
 				break;
 			
 			default:	// Default to do nothing,because that code does not be defined.

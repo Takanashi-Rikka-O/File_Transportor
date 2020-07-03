@@ -18,6 +18,18 @@ bool Server_Should_Not_To_Stop(true); // Server will check this variable before 
 
 int main(void)
 {
+
+/*
+	using namespace FTPR_SERVER;
+
+	FTPR_Server_class *TEMP=new FTPR_Server_class;
+	TEMP->_Server_();
+	delete TEMP;
+
+	_exit(0);
+
+*/
+
 	pid_t *FORK=new pid_t;	// Save fork return.
 	if (FORK)
 	{
@@ -26,7 +38,7 @@ int main(void)
 		if (*FORK != 0)
 		{
 			delete FORK;	// Parent process quit.
-			_exit(0);
+			_exit(1);
 		}
 		else
 		{
@@ -37,7 +49,7 @@ int main(void)
 				// Failed.
 				syslog(LOG(LOG_ERR),"ftprsd: Can not open new session.");
 				delete FORK;
-				_exit(0);
+				_exit(1);
 			}
 			else
 			{
@@ -56,11 +68,13 @@ int main(void)
 				if (Server == NULL)
 				{
 					syslog(LOG(LOG_NOTICE),"ftprsd: Failed to create server deamon.");
-					_exit(0);
+					_exit(1);
 				}
 				else
 					Server->_Server_();
 	
+				delete FORK;
+				syslog(LOG(LOG_NOTICE),"ftprsd: Delete fork pid.");
 				delete Server;
 
 				syslog(LOG(LOG_NOTICE),"ftprsd: Ready to quit.");
@@ -72,5 +86,7 @@ int main(void)
 	else
 		syslog(LOG(LOG_ERR),"ftprsd: Can not get memory for PID.");
 
-	exit(0);	// Quit.
+	_exit(0);	// Quit.
+
+
 }

@@ -325,6 +325,11 @@ Header :
 
 Class :
 
+	The memory alloc constraction : 
+		All pointer member which will alloc memory from kernel,if them are not changing when program processing,their memory always destory by the 
+	clear method.So if in the case some members initializing failed,but left the memory of the front member to destorying in the clear method.
+                All pointer member which will be changing in the case of program process,must reset them to 'NULL' before the next using.
+
 	Server's :
 
 		Server class FTPR_server would inherit from a FTPR basic class with protected.The basic class have three for control classes.
