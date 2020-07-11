@@ -37,6 +37,12 @@
 #define UP 23
 #define LOGOUT 24
 
+/*	Server and client identify number.	*/
+// Thread_FF will check identify field of FGU to switch process method.
+#define SERVER_ID 127
+#define CLIENT_ID 128
+
+
 /*	There define default value of shared optionals.	*/
 
 // This option must is only owns to server.
@@ -67,23 +73,25 @@
 #define FF_SET_CANCEL_STATE_ERR 1	// Can not set cancel enable.
 #define FF_SET_CANCEL_TYPE_ERR 2	// Can not set cancel type.
 #define FF_BIND_SOCKET_ERR 3		// Can not bind listen socket.
-#define FF_OPEN_LISTEN_ERR 4		// Can not open listen queue.
-#define FF_OPEN_TIMER_ERR 5		// Can not open a timer.
-#define FF_GET_IO_BUFF_ERR 6		// Can not get memory for file IO.
-#define FF_CANCEL_TIMER_ERR 7		// Can not shutdown timer which had opened.
-#define FF_GET_SUSS 8			// Succeed to finished send file work.
-#define FF_GET_ERR 9			// Detected error in thread.
-#define FF_UP_SUSS 10			// Succeed to finished receive file work.
-#define FF_UP_ERR 11			// Detected error in thread.
-#define FF_BEHAVIOR_ERR 12		// Do know what is this work flag.
-#define FF_ACCEPT_BAD 13		// Accept return less than 0.
+#define FF_CONNECT_SOCKET_ERR 4		// Can not make connection with server.
+#define FF_OPEN_LISTEN_ERR 5		// Can not open listen queue.
+#define FF_OPEN_TIMER_ERR 6		// Can not open a timer.
+#define FF_GET_IO_BUFF_ERR 7		// Can not get memory for file IO.
+#define FF_CANCEL_TIMER_ERR 8		// Can not shutdown timer which had opened.
+#define FF_GET_SUSS 9			// Succeed to finished send file work.
+#define FF_GET_ERR 10			// Detected error in thread.
+#define FF_UP_SUSS 11			// Succeed to finished receive file work.
+#define FF_UP_ERR 12			// Detected error in thread.
+#define FF_BEHAVIOR_ERR 13		// Do know what is this work flag.
+#define FF_ACCEPT_BAD 14		// Accept return less than 0.
+#define FF_ID_ERR 15
 //	Main thread of Thread_FF must call 'join' wait it and receive state code from it.
 /*			End.				*/
 
 /*	Read setting error codes.	*/
-#define FTPR_RS_F 14
-#define FTPR_RS_MEM_F 15
-#define FTPR_RS_OPENF_F 16
+#define FTPR_RS_F 16
+#define FTPR_RS_MEM_F 17
+#define FTPR_RS_OPENF_F 18
 
 /*		End.			*/
 
@@ -141,7 +149,7 @@ using SYS_SIGNAL::SYSTEM_SIGNAL_class;
 				char FILENAME[128];
 
 				// File size.
-				size_t FileSize;	
+				off_t FileSize;	
 
 			};	// Use tcp socket to send this structure object.
 
@@ -177,31 +185,36 @@ using SYS_SIGNAL::SYSTEM_SIGNAL_class;
 			short int What_Behavior;
 			// Retry Number.
 			unsigned short int Retry_Number;
-
+			// Retry to link.	 This field only is usage in client.
+			unsigned short int Retry_Link;
 			};
 
 
 	/*	Define GET/UP command thread argument structure.	*/
 	using FGU=struct File_Get_Up{
 			// TCP interface class.
-			TCP_SOCK_class *Tcp_Sock;
+			TCP_SOCK_class *Tcp_sock;
 			// File Directory IO interface class.
 			FID_class *Fid;
 			// Posix thread interface class.
-			THREAD_class *IO_Thread;
+			THREAD_class *Thread;
 			// Timer timeout value.
 			unsigned short int Timer_Timeout;	// Will use CWAITS.
 			
 			// Network io info.
-			NETIOINFO *Tcp_IO;
+			NETIOINFO *Net_io;
 
+			// Identify number.
+			unsigned short int Work_id;
 			};
 
 	// Define timer thread model and GET/UP thread model.
 	// void * (*)(void *);
 	void *Thread_Timer(void *Arg);	// Timer.
-
 	void *Thread_FF(void *Arg);	// File transfer.
+	short int _Thread_FF_Get_(FGU * & Tool,char *Buff,const size_t Buff_Len,const int TmpSocket);	// Get.
+	short int _Thread_FF_Up_(FGU * & Tool,char *Buff,const size_t Buff_Len,const int TmpSocket);	// Up.
+	void _Thread_FF_Cleanup_(void *Arg);	// Clear.
 
 
 

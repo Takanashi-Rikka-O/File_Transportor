@@ -77,10 +77,13 @@ namespace FID{
 		public:
 
 
+			bool State_Of_Initialization_FID;	// The class object state in the meantime of initialization.
+
+			FID_class();			//	Default build method.
+
 			FID_class(const char *New_Work_Home);	// Build method should change work home at first.
 			~FID_class();
 
-			bool State_Of_Initialization_FID;	// The class object state in the meantime of initialization.
 
 			int _Had_Opened_(void)
 			{
@@ -135,6 +138,7 @@ namespace FID{
 
 
 			int _MAKE_DIR_LIST_(void);	//	Make a directory list.
+			void _REMAKE_LIST_(void);	// Remake list,server can initiative call it to make new list.
 
 			void _TRAVERSE_(char* DNAME);	//	Traverse directory list.
 

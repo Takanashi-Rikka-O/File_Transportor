@@ -91,6 +91,10 @@ namespace FTPR{
 			case FF_OPEN_LISTEN_ERR:
 				_Copy_String_(LogMsg,"FTPR: Failed to set listen in ff.",33);
 				break;
+			
+			case FF_CONNECT_SOCKET_ERR:
+				_Copy_String_(LogMsg,"FTPR: Failed to make connection.",32);
+				break;
 
 			case FF_OPEN_TIMER_ERR:
 				_Copy_String_(LogMsg,"FTPR: Failed to open timer in ff.",33);
@@ -127,8 +131,12 @@ namespace FTPR{
 			case FF_ACCEPT_BAD:
 				_Copy_String_(LogMsg,"FTPR: Failed to accept link in ff.",34);
 				break;
+			
+			case FF_ID_ERR:
+				_Copy_String_(LogMsg,"FTPR: Identifying number had not defined.",41);
+				break;
 
-			deafault:
+			default:
 				_Copy_String_(LogMsg,"FTPR: Log value had not defined.",32);
 
 		}

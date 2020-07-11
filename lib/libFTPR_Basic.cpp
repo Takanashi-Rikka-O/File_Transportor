@@ -75,9 +75,12 @@ namespace FTPR{
 	bool FTPR_Basic::_Read_Shared_Setting_(const char *Setting_File)
 	{
 		// Don't check this pointer because server and client will check it in the order at front.
-
-
-
+	
+		#ifdef DEBUG	
+	
+		syslog(LOG(LOG_NOTICE),"FTPR: Setting file - %s.",Setting_File);
+	
+		#endif
 	
 		ifstream Read;	// Declare a file io object.
 

@@ -1,7 +1,7 @@
 //	FTPR_server.cpp
-//	Version : 0.2
+//	Version : 0.2.1
 //	Date : Fri Jun 12 10:31:41 2020
-//	Last revise : Fri Jun 26 20:44:? 2020
+//	Last revise : Sat Jul 11 11:05:? 2020
 //	Symbol-Constraint :
 //			_Xx..._ - Function Symbol
 //			Xx...|x|X - Variable Symbol
@@ -19,6 +19,7 @@
 //		2> Delete retry for init.
 //		3> Make a server logger to record all logs.
 //		4> Fix the TCP class failed to init.
+//		5> After server had finished 'up file' successfully,it will remake linked-list.
 
 
 #include"FTPR_server.h"
@@ -74,6 +75,11 @@ namespace FTPR_SERVER{
 	// And for simply to update,will make this function as a share lib.
 	short int FTPR_Server_class::_Read_Setting_(const char *Setting_File)
 	{
+		#ifdef DEBUG
+
+		syslog(LOG(LOG_NOTICE),"FTPR_Server: Configure file - %s.",Setting_File);
+
+		#endif
 
 		// For make same format to return function code,declare a variable.
 		short int _Read_Setting_Code(0);
@@ -148,7 +154,7 @@ namespace FTPR_SERVER{
 				else if (strncmp(Setting_Buffer,"RPATH",5) == 0)			
 				{
 					Temp_Char_Pointer=strstr(Setting_Buffer,"=");
-					if (Temp_Char_Pointer)
+					if (*(Temp_Char_Pointer+1) != '\0')
 						_Copy_String_(Root_Path,Temp_Char_Pointer+1,strlen(Temp_Char_Pointer+1));
 					else
 						_Copy_String_(Root_Path,Default_RPATH,10);
@@ -262,94 +268,6 @@ namespace FTPR_SERVER{
 		Init_Code=S_INIT_FC_SUSS;	// Success.We want it process to there and no any error.
 
 
-		/*	For this long instend if-else cause a bug:
- 				The class TCP_SOCK_class always failed to init.But if create and init it before this structure,the program is normaly to work.
-			I think is the translater optimize this structure make the bug.But also,use this style use if-else is not a good idea.
-		*/
-		// Create FID.
-/*		FIDC=new FID_class(Init_Set->Root_Path);
-		// Check status.
-		if (FIDC)
-			if (FIDC->State_Of_Initialization_FID)
-			{
-				PTC=new THREAD_class;	// Create POSIX THREAD.
-				if (PTC)
-					if (PTC->State_Of_Initialization_THREAD)
-					{
-						TSC=new TCP_SOCK_class(Init_Set->CPT,Init_Set->DUP,Init_Set->SHS->Network_IO_Timeout,Init_Set->SHS->Network_IO_Timeout);
-						if (TSC)
-							if (TSC->State_Of_Initialization_SOCK)
-							{
-								SYSS=new SYSTEM_SIGNAL_class;
-								if (SYSS)
-								{
-									if (SYSS->State_Of_Initialization_SIGNAL)
-									{
-										Init_Code=S_INIT_FC_SUSS;
-										goto INIT_QUIT;
-									}
-									else
-									{
-										Init_Code=S_INIT_SIGNAL_ERR;
-										goto INIT_LABEL1;
-									}
-								}
-								else
-								{
-									Init_Code=S_INIT_CRE_SIGNAL_ERR;
-									goto INIT_LABEL2;
-								}
-							}
-							else
-							{
-								Init_Code=S_INIT_SOCK_ERR;
-								goto INIT_LABEL2;
-							}
-						else
-						{
-							Init_Code=S_INIT_CRE_SOCK_ERR;
-							goto INIT_LABEL3;
-						}
-					}
-					else
-					{
-						Init_Code=S_INIT_THREAD_ERR;
-						goto INIT_LABEL3;
-					}
-				else
-				{
-					Init_Code=S_INIT_CRE_THREAD_ERR;
-					goto INIT_LABEL4;
-				}
-
-			}
-			else
-			{
-				Init_Code=S_INIT_FID_ERR;
-				goto INIT_LABEL4;
-			}
-		else
-		{
-			Init_Code=S_INIT_CRE_FID_ERR;
-			goto INIT_QUIT;
-		}
-		
-		// These symbols for the case of feature classes init failed to be made.
-
-		INIT_LABEL1:	
-			delete SYSS;
-			SYSS=NULL;
-		INIT_LABEL2:	
-			delete TSC;
-			TSC=NULL;
-		INIT_LABEL3:
-			delete PTC;
-			PTC=NULL;
-		INIT_LABEL4:
-			delete FIDC;
-			FIDC=NULL;
-
-*/
 		INIT_QUIT:
 
 			return Init_Code;
@@ -365,23 +283,25 @@ namespace FTPR_SERVER{
 
 		// For improve speed,this function will use two character to guess command.
 
+		The_CMD_Hit.CMDN=255; 	// None defined command.
+		The_CMD_Hit.CMDP=NULL;
+
 		if (Command)
 		{
 			if (strncmp(Command,"ls",2) == 0)
-				The_CMD_Hit.CMDN=LS,The_CMD_Hit.CMDP=NULL;
+				The_CMD_Hit.CMDN=LS;
 			else if (strncmp(Command,"cd",2) == 0)
 				The_CMD_Hit.CMDN=CD,The_CMD_Hit.CMDP=Command+3;
 			else if (strncmp(Command,"lo",2) == 0)
-				The_CMD_Hit.CMDN=LOGOUT,The_CMD_Hit.CMDP=NULL;
-			else if (strncmp(Command,"GE",2) == 0)	
+				The_CMD_Hit.CMDN=LOGOUT;
+			else if (strncmp(Command,"ge",2) == 0)	
 				The_CMD_Hit.CMDN=GET,The_CMD_Hit.CMDP=Command+4;
-			else if (strncmp(Command,"UP",2) == 0)
+			else if (strncmp(Command,"up",2) == 0)
 				The_CMD_Hit.CMDN=UP,The_CMD_Hit.CMDP=Command+3;
-			else	// None defined command.
-				The_CMD_Hit.CMDN=0,The_CMD_Hit.CMDP=NULL;
+			else;
 		}
-		else	// NULL pointer also like none command defintion.
-			The_CMD_Hit.CMDN=0,The_CMD_Hit.CMDP=NULL;		
+		else;	// NULL pointer also like none command defintion.
+
 	}
 
 
@@ -427,6 +347,21 @@ namespace FTPR_SERVER{
 		Return_Function=_Init_FC_((const void *)&Server_Set_Config);
 		if (Return_Function == S_INIT_FC_SUSS)
 		{
+			// Set signal block set.
+			SYSS->_SIGDELSET_(BLOCK_SET,SIGTERM);
+			SYSS->_SIGDELSET_(BLOCK_SET,SIGINT);
+			SYSS->_SIGDELSET_(BLOCK_SET,SIGALRM);
+			SYSS->_SIGDELSET_(BLOCK_SET,SIGHUP);
+		
+			if (SYSS->_SIGPROCMASK_(SIG_SETMASK,NULL) < 0)
+			{
+				Return_Function=S_SETSIGBLK_ERR;
+				goto _Server_Init_QUIT_;
+			}
+			else;
+		
+			// SIGINT will send SIGTERM to itself,so must after SIGINT capturer returned,the SIGTERM be recevied.		
+
 			// Set signal action. 0->T,-1->F.
 			if (SYSS->_SIGACTION_(SIGALRM,_Server_Signal_Sigalrm_) < 0)
 				Return_Function=S_SIGALRM_ERR,_Server_Init_Status_=false;
@@ -434,15 +369,25 @@ namespace FTPR_SERVER{
 				if (SYSS->_SIGACTION_(SIGHUP,_Server_Signal_Sighup_) < 0)
 					Return_Function=S_SIGHUP_ERR,_Server_Init_Status_=false;
 				else
+				{
+					SYSS->_SIGADDSET_(NORMAL_SET,SIGTERM);	// While SIGINT capturer work,block the SIGTERM until it returned.
 					if (SYSS->_SIGACTION_(SIGINT,_Server_Signal_Sigint_) < 0)
 						Return_Function=S_SIGINT_ERR,_Server_Init_Status_=false;
 					else
+					{
+						SYSS->_SIGDELSET_(NORMAL_SET,SIGTERM);
+						SYSS->_SIGADDSET_(NORMAL_SET,SIGINT);	// While SIGTERM capturer work,block SIGINT until it returned.
+
 						if (SYSS->_SIGACTION_(SIGTERM,_Server_Signal_Sigterm_) < 0)
 							Return_Function=S_SIGTERM_ERR,_Server_Init_Status_=false;
 						else;
+					}
+				}
 		}
 		else
 			_Server_Init_Status_=false;
+
+	_Server_Init_QUIT_:
 
 		_Server_Logger_(Return_Function);
 
@@ -494,19 +439,23 @@ namespace FTPR_SERVER{
 
 		// This structure will send to Thread_FF.
 		FGU Thread_Resource={
-			.Tcp_Sock=TSC,
+			.Tcp_sock=TSC,
 			.Fid=FIDC,
-			.IO_Thread=PTC,
+			.Thread=PTC,
 			.Timer_Timeout=Comm_Wait_Seconds,
-			.Tcp_IO=&NetIO,	
+			.Net_io=&NetIO,
+			.Work_id=SERVER_ID,
 			};
 
 		// Their member value could be determines before them had be used.
 
 		// For peer address.
 		struct sockaddr_in Client_Address;
-		socklen_t Address_Length(1);
+		socklen_t Address_Length(0);
 		char Address_String[16];	// For string.
+
+		// For poll.
+		struct pollfd TempPoll;
 
 		// Bind socket.
 		if (TSC->_BIND_(MAIN_SOCKET) < 0)
@@ -528,14 +477,21 @@ namespace FTPR_SERVER{
 
 		while (true && Server_Should_Not_To_Stop)
 		{
+
+			_Server_Logger_(S_ENTRY_WORK_ACCEPT);	// Record.
+
 			// Wait connection arrived.	
 			New_Chat=TSC->_ACCEPT_(MAIN_SOCKET,(struct sockaddr *)&Client_Address,&Address_Length);
 			if (New_Chat > 0)
 			{
+				// Set wait target.
+				TempPoll.fd=New_Chat;
+				TempPoll.events=POLLRDNORM;
+
 				// Succeed to accept a connection.
 				syslog(LOG(LOG_NOTICE),"FTPR_Server: Succeed to accept a connection %s:%hu",TSC->_INET_NTOP_(AF_INET,&Client_Address,Address_String,16),TSC->_NTOHS_(Client_Address.sin_port));
 
-				TSC->_POLL_SET_(New_Chat,MAIN_SOCKET,POLLRDNORM);	// Set pollfd.
+				TSC->_SET_POLLFD_(MAIN_SOCKET,TempPoll);	// Set pollfd.
 
 				// Entry communication cycle.
 
@@ -575,7 +531,6 @@ namespace FTPR_SERVER{
 
 							case GET:
 								_Server_Logger_(S_CMD_GET);
-
 								NetIO.What_Behavior=GET_FILE;	// Set cause.
 								_GET_FILE_(&Thread_Resource,New_Chat);	// Process this cmd.
 
@@ -611,7 +566,7 @@ namespace FTPR_SERVER{
 			else
 			{	
 				// Failed to accept a connection.
-				syslog(LOG(LOG_NOTICE),"FTPR_Server: Failed to accept a connection %s:%hu",TSC->_INET_NTOP_(AF_INET,&Client_Address,Address_String,16),TSC->_NTOHS_(Client_Address.sin_port));
+				syslog(LOG(LOG_NOTICE),"FTPR_Server: Failed to accept a connection .");
 			}
 			// Accept.	
 
@@ -666,8 +621,10 @@ namespace FTPR_SERVER{
 			FIDC->_TRAVERSE_(LS_Buffer);
 			if (*LS_Buffer != '\0')
 				TSC->_WRITE_SOCK_(Peer_Sock,LS_Buffer,sizeof(LS_Buffer));
-			else;
+			else
+				break;	// Next reading mut return head iterm,so break cycle.
 		} while(true);
+		TSC->_WRITE_SOCK_(Peer_Sock,"#EOF#",5);	// End.
 	}
 
 	void FTPR_Server_class::_CD_(const int Peer_Sock,const char *New_Dir)
@@ -687,12 +644,12 @@ namespace FTPR_SERVER{
 
 	}
 
-	bool FTPR_Server_class::_GET_FILE_(FGU *T_Resource,int & Client_Socket)
+	// This function will open thread,so it must set all env for thread in the front.
+	void FTPR_Server_class::_GET_FILE_(FGU *T_Resource,int & Client_Socket)
 	{
-		bool _GET_FILE_Status_(true);	// Suppose it's true.
 		char Msg[64];	// This array use to save messages to send client.
-		short int **Get_Thread_Msg(NULL);
-		struct stat TempFile_Info=FIDC->_LSTAT_((const char *)The_CMD_Hit.CMDP);
+		short int *Get_Thread_Msg(NULL);
+		struct stat TempFile_Info=FIDC->_LSTAT_((const char *)The_CMD_Hit.CMDP);	// Get target file information.
 		pthread_t PT;		// Posix thread.
 
 		/*	Variables zone.	*/
@@ -702,7 +659,6 @@ namespace FTPR_SERVER{
 		{
 			// There file had not existed.
 			_Server_Logger_(S_FILE_NOTEX);
-			_GET_FILE_Status_=false;
 			_Copy_String_(Msg,"File not existed.",17);
 			goto _GET_FILE_QUIT;
 		}
@@ -722,9 +678,7 @@ namespace FTPR_SERVER{
 		{
 			// Open file failed.
 			// Tell client the case.
-
 			_Copy_String_(Msg,"Server open file failed.",24);
-			_GET_FILE_Status_=false;
 			_Server_Logger_(S_OPEN_FILE_F);	// Record log.
 
 			goto _GET_FILE_QUIT;
@@ -734,10 +688,10 @@ namespace FTPR_SERVER{
 			// Ready to create thread for transfer file.
 
 			PTC->_LOCK_MUTEX_();	// Lock thread.
+
 			if (PTC->_CREATE_THREAD_(&PT,NULL,Thread_FF,T_Resource) != 0)
 			{
 				// Create thread fail.
-				_GET_FILE_Status_=false;
 				_Server_Logger_(S_CRE_PT_F);	// Record.
 				_Copy_String_(Msg,"Server can not open downloader.",31);
 			}
@@ -752,40 +706,35 @@ namespace FTPR_SERVER{
 				TSC->_WRITE_SOCK_(Client_Socket,&File_Info,sizeof(File_Info));
 
 				PTC->_LOCK_MUTEX_();
-				PTC->_JOIN_THREAD_(PT,(void **)Get_Thread_Msg);	// Wait thread.
+				PTC->_JOIN_THREAD_(PT,(void **)&Get_Thread_Msg);	// Wait thread.
 				FIDC->_CLOSE_(FIDC->_Get_Latest_Open_File_());	// Close file.
 			
-				if (**Get_Thread_Msg != FF_GET_SUSS)
-				{
-					_GET_FILE_Status_=false;
-					_Copy_String_(Msg,"In the time of transfer had detected error.",43);
-					_FTPR_Logger_(**Get_Thread_Msg);	// FTPR logger.
-				//	_Server_Logger_(**Get_Thread_Msg); There call FTPR'logger.
-				}
-				else
-					_Copy_String_(Msg,"Succeed to transfer file.",25);
+				if (*Get_Thread_Msg != FF_GET_SUSS)
+					_FTPR_Logger_(*Get_Thread_Msg);	// FTPR logger.
+				else;
 
 			}
 
 			PTC->_UNLOCK_MUTEX_();	// Unlock.	
+
+			return;
 		}
 
 		_GET_FILE_QUIT:
 
 			TSC->_WRITE_SOCK_(Client_Socket,Msg,strlen(Msg));	// Tell client the case.
-			return _GET_FILE_Status_;
 	}
 
-	bool FTPR_Server_class::_UP_FILE_(FGU *T_Resource,int & Client_Socket)
+	void FTPR_Server_class::_UP_FILE_(FGU *T_Resource,int & Client_Socket)
 	{
 		// UP FILE,server must receive file information from client by socket.
 		// Server send '#UPINFO#' to notice client send information.
 
-		bool _UP_FILE_Status_(true);	// Suppose true to finished.
 		char Msg[64];			// Save messages to send client.
 		char TempFile_Name[]="FTPRStmp.XXXXXX";	// Temp file name arrary.
 		int TempFileDes(-1);		// TempFile descriptor.
-		short int **Get_Thread_Msg(NULL);	// Get thread exit state.
+		short int *Get_Thread_Msg(NULL);	// Get thread exit state.
+		struct stat Temp_File_Stat;	// For temp file stat which have just received from client.
 		struct flock File_Lock={
 			.l_type=F_WRLCK,
 			.l_whence=SEEK_SET,
@@ -800,7 +749,6 @@ namespace FTPR_SERVER{
 		// Check file whether existed.
 		if (TempFile_Info.st_size > 0)	// File had existed.
 		{
-			_UP_FILE_Status_=false;
 			_Copy_String_(Msg,"File had existed.",17);
 			goto _UP_FILE_QUIT;
 		}
@@ -813,7 +761,6 @@ namespace FTPR_SERVER{
 			if (TempFileDes < 0)
 			{
 				// Failed to create tempfile.
-				_UP_FILE_Status_=false;
 				_Copy_String_(Msg,"Server can not create tmpfile.",30);	// Set message.
 				_Server_Logger_(S_FILE_HADEX);
 				goto _UP_FILE_QUIT;
@@ -821,16 +768,15 @@ namespace FTPR_SERVER{
 			else
 			{
 				// Succeed to create tmpfile,now try to get file information.
-				TSC->_WRITE_SOCK_(Client_Socket,"#UPFILE#",8);	// Request file info.
+				TSC->_WRITE_SOCK_(Client_Socket,"#UPINFO#",8);	// Request file info.
 				TSC->_POLL_(MAIN_SOCKET);	// Network select.
 				// Check whether have event come.
 				if (TSC->_Check_Main_(POLLRDNORM))
 				{
-					if (TSC->_READ_SOCK_(Client_Socket,&File_Info,sizeof(File_Info)) <= 0)	// Read info.
+					if (TSC->_READ_SOCK_(Client_Socket,&File_Info,sizeof(GET_UP)) != sizeof(GET_UP))	// Read info.
 					{
 						// Read info error.
 						_Copy_String_(Msg,"Server read file info error.",28);
-						_UP_FILE_Status_=false;
 						_Server_Logger_(S_GETF_INFO_F);
 						goto _UP_FILE_QUIT;
 					}
@@ -844,7 +790,6 @@ namespace FTPR_SERVER{
 						{
 							// Reset file length failed.
 							_Copy_String_(Msg,"Server can not reset file length.",33);
-							_UP_FILE_Status_=false;
 							_Server_Logger_(S_SETF_LEN_F);
 							goto _UP_FILE_QUIT;
 						}
@@ -855,7 +800,6 @@ namespace FTPR_SERVER{
 				{
 					// poll failed.
 					_Copy_String_(Msg,"Server can not receive file info.",33);
-					_UP_FILE_Status_=false;
 					_Server_Logger_(S_REVF_INFO_F);
 					goto _UP_FILE_QUIT;
 				}
@@ -868,7 +812,6 @@ namespace FTPR_SERVER{
 		if (FIDC->_LOCK_FILE_(TempFileDes,F_GETLK,&File_Lock) == -1)
 		{
 			// Failed to get file lock.
-			_UP_FILE_Status_=false;
 			_Copy_String_(Msg,"Server cannot lock up file.",27);	// Tell client.
 			_Server_Logger_(S_GETF_LOCK_F);	// Record.
 			goto _UP_FILE_QUIT;
@@ -878,10 +821,10 @@ namespace FTPR_SERVER{
 		// Open thread.
 
 		PTC->_LOCK_MUTEX_();	// Lock thread.
+
 		if (PTC->_CREATE_THREAD_(&PT,NULL,Thread_FF,T_Resource) != 0)
 		{
 			// Failed to create thread.
-			_UP_FILE_Status_=false;
 			_Copy_String_(Msg,"Server cannot open uploader.",28);
 			_Server_Logger_(S_CRE_PT_F);
 		}
@@ -893,24 +836,21 @@ namespace FTPR_SERVER{
 			PTC->_LOCK_MUTEX_();	// Lock thread.
 		
 			// Wait thread.
-			PTC->_JOIN_THREAD_(PT,(void **)Get_Thread_Msg);
+			PTC->_JOIN_THREAD_(PT,(void **)&Get_Thread_Msg);
 			// Check
-			if (**Get_Thread_Msg != FF_UP_SUSS)
-			{
-				_UP_FILE_Status_=false;
-				_Copy_String_(Msg,"In the time of received file had detected error.",48);
-				_FTPR_Logger_(**Get_Thread_Msg);	// FTPR logger.
-			//	_Server_Logger_(**Get_Thread_Msg);	There will invoke FTPR'logger.
-			}
+			if (*Get_Thread_Msg != FF_UP_SUSS)
+				_FTPR_Logger_(*Get_Thread_Msg);	// FTPR logger.
 			else
-				if (FIDC->_LINK_(TempFile_Name,File_Info.FILENAME) < 0)	// Failed to make hardware link.
-				{
-					_UP_FILE_Status_=false;
-					_Copy_String_(Msg,"Server can not save file.",25);
-					_Server_Logger_(S_LNK_FILE_F);	// Record.
-				}
+				if (fstat(TempFileDes,&Temp_File_Stat) < 0)
+					_Server_Logger_(S_TMP_FILE_STAT_F);
 				else
-					_Copy_String_(Msg,"Succeed to received file.",25);
+					if (Temp_File_Stat.st_size == File_Info.FileSize)
+						if (FIDC->_LINK_(TempFile_Name,File_Info.FILENAME) < 0)	// Failed to make hardware link.
+							_Server_Logger_(S_LNK_FILE_F);	// Record.
+						else
+							FIDC->_REMAKE_LIST_();	// Because have new file had link to present directory.
+					else
+						_Server_Logger_(S_TMP_FILE_SIZE_F);	// Size error.
 		}
 
 		PTC->_UNLOCK_MUTEX_();	// Release mutex.
@@ -923,8 +863,7 @@ namespace FTPR_SERVER{
 		_UP_FILE_QUIT:
 
 			FIDC->_CLOSE_(TempFileDes);	// Close temp file.
-			TSC->_WRITE_SOCK_(Client_Socket,Msg,strlen(Msg));	// Tell client what happened.
-			return _UP_FILE_Status_;
+			TSC->_WRITE_SOCK_(Client_Socket,Msg,strlen(Msg));
 	}
 
 
@@ -1019,6 +958,10 @@ namespace FTPR_SERVER{
 
 			// Init signal.
 
+			case S_SETSIGBLK_ERR:
+				_Copy_String_(LogMsg,"FTPR_Server: Failed to set server'signal block set.",51);
+				break;
+
 			case S_SIGALRM_ERR:
 				_Copy_String_(LogMsg,"FTPR_Server: Failed to set sigaction for sigalrm.",49);
 				break;
@@ -1108,6 +1051,14 @@ namespace FTPR_SERVER{
 			case S_CRE_PT_F:
 				_Copy_String_(LogMsg,"FTPR_Server: Failed to start posix thread.",42);
 				break;
+			
+			case S_TMP_FILE_STAT_F:
+				_Copy_String_(LogMsg,"FTPR_Server: Failed to get tempfile'information.",48);
+				break;
+
+			case S_TMP_FILE_SIZE_F:
+				_Copy_String_(LogMsg,"FTPR_Server: Temp file size not as same with target file.",57);
+				break;
 
 			// Entrance
 
@@ -1125,6 +1076,10 @@ namespace FTPR_SERVER{
 
 			case S_ENTRY_SERVER:
 				_Copy_String_(LogMsg,"FTPR_Server: Reached target server start.",41);
+				break;
+
+			case S_ENTRY_WORK_ACCEPT:
+				_Copy_String_(LogMsg,"FTPR_Server: Server wait connection...",38);
 				break;
 			
 			default:	// Default to do nothing,because that code does not be defined.

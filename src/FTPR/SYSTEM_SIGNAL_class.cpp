@@ -29,13 +29,17 @@ namespace SYS_SIGNAL{
 	{
 		// Suppose the State is true.
 		State_Of_Initialization_SIGNAL=true;
+		
+		// Set memory.
+		memset(&Sigact,'\0',sizeof(struct sigaction));
+		memset(&Oldact,'\0',sizeof(struct sigaction));
 
 		// Auto to initialize sigset at class creating.
 		
-		if (_SIGEMPTYSET_(BLOCK_SET) < 0)
+		if (_SIGFILLSET_(BLOCK_SET) < 0)
 		{
 			// Set normaly set was fault.
-			syslog(LOG(LOG_ERR),"FTPR_SIGNAL: Can not empty signal block set.");
+			syslog(LOG(LOG_ERR),"FTPR_SIGNAL: Can not fill signal block set.");
 			State_Of_Initialization_SIGNAL=false;
 		}
 		else
@@ -55,14 +59,14 @@ namespace SYS_SIGNAL{
 
 		/*	Record log.		*/
 
-		syslog(LOG(LOG_NOTICE),"FTPR_SIGNAL: Had created a signal class.");
+		syslog(LOG(LOG_NOTICE),"FTPR_SIGNAL: Success to initialized signal interface.");
 
 	}
 	
 	SYSTEM_SIGNAL_class::~SYSTEM_SIGNAL_class()
 	{
 		// Because this class does not use any heap memory,so do not anymore.
-		syslog(LOG(LOG_INFO),"FTPR_SIGNAL: Had deleted signal class.");	
+		syslog(LOG(LOG_INFO),"FTPR_SIGNAL: Success to deleted signal interface.");	
 	}
 
 	// Define others method.
@@ -86,6 +90,21 @@ namespace SYS_SIGNAL{
 				return 8;
 		}
 
+	}
+
+	int SYSTEM_SIGNAL_class::_SIGFILLSET_(const unsigned short int Which)
+	{
+		switch (Which)
+		{
+			case BLOCK_SET:
+				return sigfillset(&SignalBlock);
+			case NORMAL_SET:
+				return sigfillset(&SignalSet);
+			default:
+				return 8;
+
+
+		}
 	}
 
 	int SYSTEM_SIGNAL_class::_SIGADDSET_(const unsigned short int Which,int SIG)
@@ -160,6 +179,7 @@ namespace SYS_SIGNAL{
 		Sigact.sa_flags&=FLAG;			// At first,close other flags.
 		Sigact.sa_flags|=FLAG|SA_SIGINFO;	// Open this FLAG and SA_SIGINFO.
 		Sigact.sa_sigaction=ACTION;		// Sigaction function.
+		Sigact.sa_mask=SignalSet;		// Mask,default is empty.
 		return sigaction(SIG,&Sigact,&Oldact);
 	}
 
@@ -183,7 +203,7 @@ namespace SYS_SIGNAL{
 		return sigqueue(PID,SIG,INFO);	// Send signal.
 	}
 
-	inline int SYSTEM_SIGNAL_class::_SIGPROCMASK_(int HOW,sigset_t *OLDSET)
+	int SYSTEM_SIGNAL_class::_SIGPROCMASK_(int HOW,sigset_t *OLDSET)
 	{
 		// Set signal block set.
 		return sigprocmask(HOW,&SignalBlock,OLDSET);

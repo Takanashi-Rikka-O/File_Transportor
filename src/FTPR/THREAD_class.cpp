@@ -49,6 +49,8 @@ namespace PTH{
 		}
 		else;
 
+		syslog(LOG(LOG_NOTICE),"FTPR_PosixThread: Initialized thread interface.");
+
 	}
 
 	THREAD_class::~THREAD_class()

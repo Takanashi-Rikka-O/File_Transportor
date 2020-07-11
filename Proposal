@@ -32,11 +32,15 @@ Transfer_Verbose :
 	Port : 
 		The default communication port will use '4396'.User could revise configure file to change communication port,but if the option is not a right
 	format,program will use the default setting them will have encoding in program.
+		The default file transfer port will use '4397'.And also could revise configure file to change it.
 	IP:
 		Default use the first IP Address in Host Address list.
 
 	# Could using TCP to send binary data.
 	
+
+	# For client.Client will call connect to make link with server,by the time,kernel will alloc a port to be use for it.And also could bind a stable 
+	# port.But there does not need to receive socket error from transfer layout.
 
 Server :
 	
@@ -92,7 +96,7 @@ Server :
 		Initialization -
 				1> Open setting file and read settings,if file had be not existed,would use the default setting.
 				2> Initialize variables.
-				3> Set root tree.
+				3> Set root tree.	( This processing must left the last to be finished as well)
 				4> Change work home.
 				5> Set signal behavior.
 
@@ -114,8 +118,6 @@ Server :
 			cd Dir : Change work directory. (Server command)
 			logout : Shutdown a connection from client. (Client command)
 			GET File : (Client command)
-				This command would received by server from client.And server would build a message send to client,style like this :
-			#		< "#PORT=XX#FileName=SS#Size=NN#\0" > (Bytes)
 
 				I found TCP could used to send structure,so could define a structure to save file info.After a message,peer send this 
 			structure to peer.
@@ -158,18 +160,19 @@ Client :
 		FTPR_client as a tool to connect to server and download file or upload file.It as a frontprocess to respones user command.
 		FTPR_client commands :
 
-			ls
-			cd Dir
-			logout
-			link
-			GET File
-			UP File	
-			exit
-			help
+			ls		(list file tree at this layout)
+			cd Dir		(change directory)
+			logout		(disconnect)
+			link		(connect)
+			GET File	(open thread to get file)
+			UP File		(open thread to send file)
+			exit		(exit program,this command will cause disconnect)
+			help		(view help messages)
 
 	Design :
 
-		It like to FTPR_server inherit from a basic class,the basic class have TCP-Socket interfaces and File-Control interfaces and Thread interface.
+		It like to FTPR_server inherit from a basic class,the basic class have TCP-Socket interfaces and File-Control interfaces and Thread interface
+	and signal interface.
 	
 		FTPR_client
 			|
@@ -194,13 +197,13 @@ Client :
 				4> Set signal handler.
 		
 		Inactive with user -
-				1> Get server IP:Port.
-				2> Try to make connection with server.
+				1> Get server IP:Port. (this is means client must have a function to take ip and port)
 
 		Respones command -
 				1> Waiting for input by user.
-				2> Check command and send to server.
-				3> View result by back.
+				2> Try to make connection with server.
+				3> Check command and send to server.
+				4> View result by back.
 		
 		Shutdown - 
 				1> Recycle resource.
@@ -213,22 +216,14 @@ Client :
 			logout : Initiative to dislink a connection.
 			link : Make link to server.
 			GET File :
-				Send this command and wait responition from server.If command succeed,server will return a link info string :
-			#		< "#PORT=XX#FileName=SS#Size=NN#\0" > (Bytes)
-				Client parsing this string and open a new pthread try to make connection with server download poer.Before download,client must
-			try to make new file.If failed to make new file,it would return error string to user.The server'upload will be closing after timeout.
 
 				Client received message '#OK#' then try to receive a file info structure,and then open thread try to make connect.If client
 			can not normaly finished ready work,it must give up for this connection.And then server will timeout.
 				
-
-
 			UP File :
-				This command feature as same as 'GET File'.But it is upload to server.So client must try to open file,if failed,send EOF to
-			server.
-					
+			
 				Client received message '#UPINFO#' then send file info structure to server,but UsePort is NULL.That field will be fulling by
-			server.After server already,it will return '#OK#' then client could try to connect it.
+			server.After server already,it will return '#OK#' then client could try to connect it send file to peer.
 
 
 	Signal :
@@ -237,6 +232,8 @@ Client :
 		SIGINT		// Interrupt.
 		SIGHUP		// HungUp.
 		SIGALRM		// Alarm.
+
+		# Client as a frontground process group.So it never receive the SIGTTIN and SIGTTOUT.
 
 
 Header :
@@ -332,23 +329,23 @@ Class :
 
 	Server's :
 
-		Server class FTPR_server would inherit from a FTPR basic class with protected.The basic class have three for control classes.
+		Server class FTPR_server would inherit from a FTPR basic class with protected.The basic class have four for control classes.
 
 		FTPR has 'FID_class','THREAD_class','TCP_SOCK_class' 'SYSTEM_SIGNAL_class" and some shared structure.
 
 		FTPR_server :
-			<rewrite 'process shutdown' 'command parsing' 'setting read'> <FTPR_server initialization> <work function>
+			<rewrite 'command parsing' 'setting read'> <FTPR_server initialization> <work function> <server shutdown>
 		
 
 
 	Client's :
 
-		Client class FTPR_client would inherit from a FTPR basic class with protected.The basic class have three for control classes.
+		Client class FTPR_client would inherit from a FTPR basic class with protected.The basic class have four for control classes.
 
-		FTPR has 'FID_class','THREAD_class','TCP_SOCK_class' and some unique attrbutes;
+		FTPR has 'FID_class','THREAD_class','TCP_SOCK_class' 'SYSTEM_SIGNAL_class' and some unique attrbutes;
 
 		FTPR_client :
-			<rewrite 'process shutdown' 'command parsing' 'setting read'> <FTPR_client initialization> <work function>
+			<rewrite 'command parsing' 'setting read'> <FTPR_client initialization> <work function> <take ip:port>
 
 
 Features class : 
@@ -361,15 +358,16 @@ Features class :
 				File's 
 					<open> <close> <unlink> <link> <tempfile> <read file> 
 					<write file> <file length change> <lock file> <file inforamtion> <file seek>
+					<rename> <get latest open file> <get latest open temp file>
 
 		Directory operated interfaces contain :
 				Directory's
 					<open dir> <close dir> <reset dir ptr> <make list for items> <change dir> <get dir name>
-					<read dir> <clear list> <traverse list>
+					<read dir> <clear list> <traverse list> <get root home> <get work home> <remake linked-list>
 	
 		Variables :
-				<The max length of path name> <The max length of file name> <The max number to open file> <list structure pointer> 
-				<directory pointer> <work home> <root home> <list length record number> <class initialize status> 
+				<work home> <root home> <max length of path> <max length of name> <maxnum of open> <directory pointer> <linked-list of items>
+				<the length of list in this time> <the number for had opened files> <temp file descriptor> <class init status>
 
 	class THREAD_class :	It in the namespace 'PTH' ;
 
@@ -377,11 +375,11 @@ Features class :
 
 		POSIX Thread control interfaces contain :
 				Thread's
-					<create thread> <init attr object> <destroy attr object> <set thread attrbutes> <cancle thread> <thread timer> 
-					<detach thread> <join to another thread>
+					<create thread> <init attr object> <destroy attr object> <set thread attrbutes> <cancle thread> <get/set detach thread>
+					<join to another thread> <init/destroy mutex> <lock thread> <unlock thread>
 
 		Variables :
-				<timeout value> <pthread_attr_t object> <build state>
+				<pthread_attr_t object> <build state> <pthread_mutex>
 
 
 	class TCP_SOCK_class :	It in the namespace 'SOCKET' ;
@@ -390,11 +388,17 @@ Features class :
 	
 		Socket control interfaces contain :
 				Socket's
-					<create socket> <bind> <listen> <connect> <accept> <socket read> <socket write> <link disable> 
-					<set socket optional> <NSAP to string> <string to NSAP> <net database>
+					<create socket> <bind> <listen> <connect> <accept> <socket read> <socket write> <link disable> <byte order convertion>
+					<set/get socket optional> <NSAP to string> <string to NSAP> <net database> <poll> <check events> 
+					<set/get wait time> <set/get poll object> <set/get port> <set/get addr> <set/get socket>
 
 		Variables : 
-				<socket array> <port array> <build state> <default server port> 
+				<socket array> <build state> <host name array> <sockaddr_in communication and transfer> <addrinfo pointer> <timing value>
+				<poll communication and transfer>
+
+		# Define two of build method for server and client.
+		(Server use the sockets which created by build method to accept link.)	
+		(Client use the sockets which created by build method to connect to server.)
 
 	class SYSTEM_SIGNAL_class : It in the namespace 'SYS_SIGNAL' ;
 	
@@ -402,10 +406,12 @@ Features class :
 
 		System signal interfaces contain : 
 				Signal's
-					<signal set interface> <signal sign in interface> <signal send interface> <suspend call> <signal block set>
+					<empty/fill signal set> <del/add signal from set> <check if the signal had existed in set> <sigaction set>
+					<pause> <suspend> <kill> <queue signal send function> <set mask> <get the had block signal>
+					<get normaly set> <get block set> <get old action> <get this action>
 					
 		Variables :
-				<sigset_t object> <siginfo_t object> <sigaction object> <block set>
+				<the old action> <the new action> <general signal set> <the block signal set> <class init status>
 
 Basic class :
 
@@ -418,21 +424,22 @@ Basic class :
 	#	This class integrates features interfaces and contain some necessary data type.
 
 		FTPR contain :
-			Feature interfaces - <FID_class> <THREAD_class> <TCP_SOCK> <System_Signal>
+			Feature interfaces - <FID_class> <THREAD_class> <TCP_SOCK> <SYSTEM_SIGNAL_class>
 
 			Macro >
-				<Default value of optional setting> <Command number>
+				<Default value of optional setting> <Command number> <FTPR error codes>
 
 			Necessary data type >
-				<feature classes pointer> <share setting optionals>
-				
+				<feature classes pointer> <share setting optionals> <structure for thread function> <file info structure> <timer structure>
+
 			Virtual functions >
-				<command parsing> <setting reading> <process shutdown> <Initialize feature classes>
+				<command parsing> <setting reading> <Initialize feature classes> <clear method>
 			
 			Really function >
-				<make command string> <cut file info> <read shared setting>
+				<make command string> <cut file info> <read shared setting> <logger> <calculate opetion number>
 
 	!!	For upgrad setting optionals,must make the setting reading function as a shared library function.
+	!!	And also make the thread class as a shared library function.
 
 	# Several structures will be using at some class all is defined in named space FTPR.
 
@@ -444,7 +451,8 @@ Working_Verbose :
 	'FTPR_server.conf',after initialized,entry server working stage.Open socket and bind it then start listen,wait connection from client.The maxnumber
 	of listen queue is equal to '1'.So the same time can only services one of user.After user connected,wait command from peer,and then parsing command
 	do some work.Server can not be shutdown by peer,must send signal to server process by system manager.When server is running,setting can not be 
-	changed,if want to change some setting,must close process at first and change setting file then restart it.
+	changed,if want to change some setting,must close process at first and change setting file then restart it.And for optimize effect,whild client call
+	once 'up file' after,server to remake items linked-list.(Not doint that for 'ls')
 
 	Client : 
 		Client would set enviornment when it has been running.Create FTPR_client object,the class object initialization.Entry user inactive mode.
@@ -452,6 +460,8 @@ Working_Verbose :
 	After connection made,using the main thread to have communication with server,and open other threads to receive or send file with server.When user
 	typed 'logout',then it would initiative dislink with server which was connected with it.When user typed 'exit' client will recycle resources and then
 	shutdown process.
+		For get result from server.The command 'ls',server will send '#EOF#' to client to means list had all sent.If client receive this
+	string,it is know the items all is there,then it return to responer from 'ls' model.
 
 Setting of Server and Client :
 
@@ -459,23 +469,23 @@ Setting of Server and Client :
 
 	#	The shared settings:
 
-		1> MBUFF-Message buff size,for command receives.
-		2> FBUFF-File buff size,for file io buffer size in thread.
-		3> FMASK-Make file mask.
-		4> RSIO-Retry net io,for thread to read or write data.
-		5> NIOTIMEOUT-Network io timeout,for thread io timer.
+		1> MBUFF : Message buff size,for command receives.
+		2> FBUFF : File buff size,for file io buffer size in thread.
+		3> FMASK : Make file mask.
+		4> RSIO : Retry net io,for thread to read or write data.
+		5> NIOTIMEOUT : Network io timeout,for thread io timer.
 
 	#	Server settings:
 		
-		1> RPATH-Root path.
-		2> DUPORT-Down or up port.
-		3> CWAITS-Connect wait timeout,in down/up thread.
-		4> CPORT-Communiting port,for server and client main thread.
+		1> RPATH : Root path.
+		2> DUPORT : Down or up port.
+		3> CWAITS : Connect wait timeout,in down/up thread.
+		4> CPORT : Communiting port,for server and client main thread.
 
 	#	Client settings:
 
-		1> DPATH-File download saving path.
-		2> RLINK-Client retry to make connection with server.
+		1> DPATH : File download saving path.
+		2> RLINK : Client retry to make connection with server. (If exceed this limit,client will return connect failed.)
 
 Posix Threads Model : 
 
@@ -512,29 +522,59 @@ Posix Threads Model :
 	2> :
 		Because can not send a classic function,so set this function as normaly C function.
 		For arguments :
-			Because this model respones the GET/UP command,will make network IO.So it need a TCP_SOCK_class object.
-			Because this model will IO file,so it need a FID_class object.
-			Because this model will open a new thread to timing for itself,so it need a Timer function and timeout value.
-			Because this model will open timer,and timer does not join to main thread,so it need a detach thread attribut object.
-			Because while this model finishing,main thread must wait it finished,so it need a pthread_mutex_t object.	
-																|--- THREAD class *
-	
-			Because this model respone two situation for network IO,so it need a structure to get network IO information.
+			Posix thread function have to read/write socket,read/write file,open timer.So the parameter must contain TCP,FID,THREAD classes.
+			It must have a method to checking for select which work mode,so must have identify number was contained in parameter.
+			Thread must to knows Network IO enviornment,it contains Buffer_Size,Behavior,Retry_Number(For read socket),Retry_Link(For connect).
+			And must to knows the time limit for while to close it on block.(Client not block)
 
 			struct FGU{
-					TCP_SOCK_class *Tcp_Sock;	// Socket and Network IO.
+					TCP_SOCK_class *Tcp_sock;	// Socket and Network IO.
 					FID_class *Fid;			// File IO.
-					THREAD_class *IO_Thread;	// For mutex lock and unlock.
+					THREAD_class *Thread;	// For mutex lock and unlock.
 					unsigned short int Timer_Timeout;	// Timing value.
-					NETIOINFO Tcp_IO;		// Get or Up. Behavior check.
+					NETIOINFO* Net_io;		// Get or Up. Behavior check.
+					Work_id;	// For switch work mode.
 				};
 
+			(Thread_FF'working order)
 			Lock mutex->Set cancel type->Bind File socket->Open listen->Unlock mutex->Open timer->Accept->Cancel timer->Work->Exit.
 
 			GET/UP thread model does not set as deatch,but it receive cancel request,after it unlock.Main thread will wait it.
 
 		# This thread had designed,but does not wait write for network.
 
+	3> Thread_Functions :
+		void *Thread_Timer(void *Arg);
+		void *Thread_FF(void *Arg);
+		short int _Thread_FF_Get_(FGU * & Tool,char *Buff,const size_t Buff_Len,const int TmpSocket);
+		short int _Thread_FF_Up_(FGU * & Tool,char *Buff,const size_t Buff_Len,const int TmpSocket);
+		void _Thread_FF_Cleanup_(void *Arg);
+
+		Thread_Timer :
+			Timing seconds,if time out it would send close request to Thread_FF.
+		
+		Thread_FF : 
+			It respones download or upload for server and client.Use a Identify number to switch work mode.
+			Server : Bind socket and wait connect ;
+			Client : Connect to server ;
+			After success get link or make link,checking behavior parameter(in Net_io) to process work.For working have two of functions can 
+		be invoked '_Thread_FF_Get_' or '_Thread_FF_Up_',usage like their names as.Server for 'get' will invoke 'Up',for 'up' will invoke 'Get'.
+		Client for 'get' will invoke 'Get',for 'up' will invoke 'Up'.
+			And this function have to sign in a clear function '_Thread_FF_Cleanup_' for destroy memory while it ready to exit.
+
+			(Thread_FF does not check file whether is complete from socker,and also does not check target file descriptor whether is normaly to be
+		opened.These must set by main.)
+
+		_Thread_FF_Get_ :
+			It finish download work.Return 0 on success,return -1 on error.
+
+		_Thread_FF_Up_ :
+			It finish upload work.Return 0 on success,return -1 on error.
+
+		(Get and Up does not check file whether is completed or target file descriptor whether is normaly to be opened.These will set by caller.)
+
+		_Thread_FF_Cleanup_ :
+			If Arg is not NULL,then delete[] it.
 
 Library: !!!
 

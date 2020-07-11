@@ -1,7 +1,7 @@
 //	FID_class.cpp
-//	Version : 0.2
+//	Version : 0.2.1
 //	Date : Sat May 23 15:12:12 2020
-//	Last revise : Sat Jun 20 22:30:? 2020
+//	Last revise : Sat Jul 17 11:03:? 2020
 //	Symbol-Constraint :
 //			_Xx..._ - Function Symbol
 //			Xx...|x|X - Variable Symbol
@@ -16,19 +16,65 @@
 //		"FID_class.h"
 //	Fix :
 //		1> Adjustment build method and record format.(Now when class was be created it will make program change work home.)
+//		2> Adding remake list function.
 
 
 #include"FID_class.h"
 #include<iostream>
 
-//#define GET_MEM_ERR_W 1
-//#define GET_MEM_ERR_N 2
-//#define GET_MEM_ERR_O 3
-
-//#define ERR_STR_MEM "Can not get memory - Code : %d"
-
 
 namespace FID{
+
+
+	// Client must use this function init FID class.
+	FID_class::FID_class():State_Of_Initialization_FID(true)
+	{
+		// Because _CHDIR_ will make a linked-list,but client need not use that.
+		// This method for preparation of client to init FID.
+		// Server never should not to use this function.
+	
+		/*	Initialize.	*/
+		Work_Home=NULL;
+		Root_Home=NULL;
+		Directory=NULL;
+		FDES_OPENED=NULL;
+		List_Head=NULL;
+		FID_TempFile=-1;
+		Current_Length_List=-1;
+		Current_Length_FDES=1;
+		_OPEN_MAX_=-1;	
+		/*	Get configre.	*/
+		_PATH_MAX_=pathconf(".",_PC_PATH_MAX);	// Get path max.
+		_NAME_MAX_=pathconf(".",_PC_NAME_MAX);	// Get name length limit, this value will limits the file name max length.
+		
+		/*	Set variables.	*/
+
+		Work_Home=new char[_PATH_MAX_];	// For currently work path.
+		if (NULL == Work_Home)
+		{
+			syslog(LOG(LOG_ERR),"FTPR_FID: Can not allocs memory for work home.");
+			State_Of_Initialization_FID=false;
+			return;
+		}
+		else;
+
+		FDES_OPENED=new int[Current_Length_FDES];	// A pointer point to a int type mem.
+		if (NULL == FDES_OPENED)
+		{
+			syslog(LOG(LOG_NOTICE),"FTPR_FID: Can not allocs memory for fdes.");
+			State_Of_Initialization_FID=false;
+			return;
+		}
+		else
+			*FDES_OPENED=-1;	// Initialize.
+
+		syslog(LOG(LOG_NOTICE),"FTPR_FID: Limits -");
+		syslog(LOG(LOG_NOTICE),"FTPR_FID: Path max : %ld.",_PATH_MAX_);
+		syslog(LOG(LOG_NOTICE),"FTPR_FID: Name max : %ld.",_NAME_MAX_);
+
+
+	}
+
 	
 	FID_class::FID_class(const char *New_Work_Home)	//	Build method.
 	{
@@ -121,6 +167,11 @@ namespace FID{
 		}
 		else;
 
+		syslog(LOG(LOG_NOTICE),"FTPR_FID: Limits -");
+		syslog(LOG(LOG_NOTICE),"FTPR_FID: Path max : %ld.",_PATH_MAX_);
+		syslog(LOG(LOG_NOTICE),"FTPR_FID: Name max : %ld.",_NAME_MAX_);
+		syslog(LOG(LOG_NOTICE),"FTPR_FID: Open max : %ld.",_OPEN_MAX_);
+
 	}
 
 	FID_class::~FID_class()	//	Clear method.
@@ -137,8 +188,8 @@ namespace FID{
 		
 		if (Root_Home)
 		{	
-			syslog(LOG(LOG_INFO),"FTPR_FID: Root directory path deleted.");
 			delete[] Root_Home;
+			syslog(LOG(LOG_INFO),"FTPR_FID: Root directory path deleted.");
 		}
 		else;
 
@@ -161,19 +212,29 @@ namespace FID{
 		if (List_Head)
 		{
 			syslog(LOG(LOG_INFO),"FTPR_FID: Clear linked-list.");
-			_CLEAR_LIST_(List_Head);	
+			_CLEAR_LIST_(List_Head);
+			List_Head=NULL;	
 		}
 		else;
 
 		_CLOSE_(FID_TempFile);	// Closing tempfile.
 
-		syslog(LOG(LOG_NOTICE),"FTPR_FID: Destroied file class.");
+		syslog(LOG(LOG_NOTICE),"FTPR_FID: Destroied file&directory interface.");
 
 		
 	}
 
 	int FID_class::_OPEN_(const char* FILENAME,int FLAG,...)
 	{
+
+		if (strlen(FILENAME) > _NAME_MAX_)
+		{
+			syslog(LOG(LOG_ERR),"FTPR_FID: File name too long.");
+			return -1;
+		}
+		else;
+
+
 
 		int Temporaryly_Fdes=-1;	// Temp variable.
 		FLAG|=O_NOCTTY;	// If pathname link to a tty file,don't assignment it as control tty for this process.
@@ -245,6 +306,15 @@ namespace FID{
 	struct stat FID_class::_LSTAT_(const char *FILENAME)
 	{
 		struct stat Stat_BUF;	//	Create a auto variable of struct stat.
+		// File name must less than _NAME_MAX_
+		if (strlen(FILENAME) > _NAME_MAX_)
+		{
+			syslog(LOG(LOG_ERR),"FTPR_FID: File name too long.");
+			Stat_BUF.st_size=0;
+			return Stat_BUF;
+		}
+		else;
+
 		if (lstat(FILENAME,&Stat_BUF) < 0)
 		{
 			Stat_BUF.st_size=0;
@@ -314,6 +384,13 @@ namespace FID{
 	
 	bool FID_class::_OPEN_DIR_(const char* DIRPATH)
 	{
+		if (strlen(DIRPATH) > _NAME_MAX_)
+		{
+			syslog(LOG(LOG_ERR),"FTPR_FID: Directory name too long.");
+			return false;
+		}
+		else;
+
 		//	Open directory.
 		Directory=opendir(DIRPATH);	
 		return Directory?true:false;	
@@ -341,6 +418,14 @@ namespace FID{
 	
 	bool FID_class::_CHDIR_(const char *New_Directory)
 	{
+
+		if (strlen(New_Directory) > _PATH_MAX_)
+		{
+			syslog(LOG(LOG_ERR),"FTPR_FID: New directory path length too long.");
+			return false;
+		}
+		else;
+
 		if (chdir(New_Directory) < 0)
 			return false;
 		else
@@ -352,6 +437,7 @@ namespace FID{
 			_Copy_String_(Work_Home,New_Directory,New_Dir_Len);
 
 			_CLEAR_LIST_(List_Head);		//	Recycle the older list.
+			List_Head=NULL;	// Comply with constraction to reset this pointer.
 
 			Current_Length_List=_MAKE_DIR_LIST_();	//	When process entry a new dir,then create a new directory items list.
 			
@@ -447,6 +533,33 @@ namespace FID{
 		return Links;
 	}
 
+	void FID_class::_REMAKE_LIST_()
+	{
+
+		/*	Nothings need by this function.	*/
+
+		//	Env
+
+		/*	Check if had create list.	*/
+		if (List_Head)
+		{
+			_CLEAR_LIST_(List_Head);
+			List_Head=NULL;
+		}
+		else;
+
+		if (0 == (Current_Length_List=_MAKE_DIR_LIST_()))
+			syslog(LOG(LOG_ERR),"FTPR_FID: Failed to remake linked-list for items.");
+		else
+			syslog(LOG(LOG_ERR),"FTPR_FID: Remade linked-list.");
+
+		//	Primary
+
+
+		//	Return
+
+	}
+
 	void FID_class::_TRAVERSE_(char *DNAME)
 	{
 		static DIL* Next_Pos(List_Head);	//	Head start.
@@ -479,9 +592,9 @@ namespace FID{
 			_CLEAR_LIST_(NODE->Next);	//	Recursive.
 			delete[] NODE->Item_Name;	//	Data in the list.
 			delete NODE;	//	Delete Node.
+			--Current_Length_List;	// Subtract the length of list on parent.
 		}
-		else
-			;
+		else;
 	}	
 
 	short int FID_class::_WORKHOME_(char *Path_Array,const size_t Array_Len)

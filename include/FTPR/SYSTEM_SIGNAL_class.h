@@ -56,6 +56,7 @@ namespace SYS_SIGNAL{
 			
 			/*	Signal set.	*/
 			int _SIGEMPTYSET_(const unsigned short int Which);
+			int _SIGFILLSET_(const unsigned short int Which);
 			int _SIGADDSET_(const unsigned short int Which,int SIG);
 			int _SIGDELSET_(const unsigned short int Which,int SIG);
 			int _SIGISMEMBER_(const unsigned short int Which,int SIG);
@@ -77,15 +78,25 @@ namespace SYS_SIGNAL{
 			int _SIGPENDING_(sigset_t *Had_Block);
 		
 			/*	Get set.	*/
-			sigset_t _GET_LAST_SET_(void)
+			sigset_t _GET_NOR_SET_(void)
 			{
 				return SignalSet;
 			}
 
+			sigset_t _GET_BLK_SET_(void)
+			{
+				return SignalBlock;
+			}
+
 			/*	Get the old sigaction set.	*/
-			struct sigaction _GET_LAST_SIGACTON_(void)
+			struct sigaction _GET_OLD_SIGACTON_(void)
 			{
 				return Oldact;
+			}
+	
+			struct sigaction _GET_CUR_SIGNACTION_(void)
+			{
+				return Sigact;
 			}
 
 			/*	Get signal info.	*/	// None usage of this function,because siginfo_t object often using in sigaction function.

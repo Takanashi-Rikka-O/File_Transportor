@@ -1,1 +1,1 @@
-../../src/FTPR/libFTPR_THREAD.cpp
+../../lib/libFTPR_THREAD.cpp

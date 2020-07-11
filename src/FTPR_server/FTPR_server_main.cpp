@@ -53,7 +53,7 @@ int main(void)
 			}
 			else
 			{
-				syslog(LOG(LOG_NOTICE),"ftprsd: New processes group %ld,leader is %ld.",getpid(),getpid());	// Record.
+				syslog(LOG(LOG_NOTICE),"ftprsd: New processes group %d,leader is %d.",getpid(),getpid());	// Record.
 				// Close 0,1,2.
 
 				(void)close(STDIN_FILENO);

@@ -53,64 +53,68 @@
 // _Init_FC_ end
 
 // Signal
-#define S_SIGALRM_ERR 14
-#define S_SIGHUP_ERR 15
-#define S_SIGINT_ERR 16
-#define S_SIGTERM_ERR 17
+#define S_SETSIGBLK_ERR 14
+#define S_SIGALRM_ERR 15
+#define S_SIGHUP_ERR 16
+#define S_SIGINT_ERR 17
+#define S_SIGTERM_ERR 18
 
 
 // _WorkUp_
 
-#define S_BIND_ERR 18
-#define S_LISTEN_ERR 19
+#define S_BIND_ERR 19
+#define S_LISTEN_ERR 20
 
 // GET FILE
-#define S_FILE_NOTEX 20
-#define S_OPEN_FILE_F 21
-#define S_CRE_PT_F 22
-#define S_CMD_GET 23
+#define S_FILE_NOTEX 21
+#define S_OPEN_FILE_F 22
+#define S_CRE_PT_F 23
+#define S_CMD_GET 24
 
 // UP FILE
-#define S_FILE_HADEX 24
-#define S_GETF_INFO_F 25
-#define S_SETF_LEN_F 26
-#define S_REVF_INFO_F 27
-#define S_GETF_LOCK_F 28
-#define S_LNK_FILE_F 29
-#define S_CMD_UP 30
+#define S_FILE_HADEX 25
+#define S_GETF_INFO_F 26
+#define S_SETF_LEN_F 27
+#define S_REVF_INFO_F 28
+#define S_GETF_LOCK_F 29
+#define S_LNK_FILE_F 30
+#define S_CMD_UP 31
+#define S_TMP_FILE_STAT_F 43
+#define S_TMP_FILE_SIZE_F 44
 
 // CD
-#define S_CD_T 31
-#define S_CD_F 32
-#define S_CMD_CD 33
+#define S_CD_T 32
+#define S_CD_F 33
+#define S_CMD_CD 34
 
 // LS
-#define S_LS_T 34
-#define S_CMD_LS 35
+#define S_LS_T 35
+#define S_CMD_LS 36
 
-#define S_FAIL_MEM 36
+#define S_FAIL_MEM 37
 
 // _WorkUp_ end
 
 // Entrances
 
-#define S_ENTRY_INIT 37
-#define S_ENTRY_WORK 38
-#define S_ENTRY_DOWN 39
-#define S_ENTRY_SERVER 40
+#define S_ENTRY_INIT 38
+#define S_ENTRY_WORK 39
+#define S_ENTRY_DOWN 40
+#define S_ENTRY_SERVER 41
+#define S_ENTRY_WORK_ACCEPT 42
 
 // Entrances end
 
 
 /*	End of error code.	*/
 
-#define CONFIG_FILE "/etc/ftprd/server/FTPR_server.conf"	// Configure file.
+#define CONFIG_FILE "/etc/ftpr/server/FTPR_server.conf"	// Configure file.
 
 /*	The default server setting.	*/
 
 #define Default_CWAITS 30
 #define Default_CPORT 4396
-#define Default_DUPORT 33242
+#define Default_DUPORT 4397
 #define Default_RPATH "/tmp"	// ftprsd must check this file if had existed.In the case of not existed,server will try to mkdir.
 
 /*	End of default setting.	*/
@@ -197,11 +201,11 @@ namespace FTPR_SERVER{
 
 			// Define 'GET File' function.
 
-			bool _GET_FILE_(FGU *T_Resource,int & Client_Socket);		// It only need parameters,a FGU object and client socket.
+			void _GET_FILE_(FGU *T_Resource,int & Client_Socket);		// It only need parameters,a FGU object and client socket.
 
 			// Define 'UP File' function.			
 			
-			bool _UP_FILE_(FGU *T_Resource,int & Client_Socket);		// Like _GET_FILE_.
+			void _UP_FILE_(FGU *T_Resource,int & Client_Socket);		// Like _GET_FILE_.
 
 			/*	They are can accessing all resources of this class.	*/
 

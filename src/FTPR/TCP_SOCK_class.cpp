@@ -1,5 +1,5 @@
 //	TCP_SOCK_class.cpp
-//	Version : 0.1
+//	Version : 0.1.2
 //	Date : Sat May 23 15:12:36 2020
 //	Last revise : Sat May 23 15:12:36 2020
 //	Symbol-Constraint :
@@ -11,6 +11,11 @@
 //		Socket functions.
 //	Header :
 //		"TCP_SOCK_class.h"
+//
+//	Fix :
+//		1> Change method for get host information when processing in server.
+//		2> Adding new build method for client.
+//		3> Adding interfaces for change data-members.
 
 
 #include"TCP_SOCK_class.h"
@@ -21,12 +26,51 @@ namespace SOCKET{
 
 	// [0]->Main,[1]->Thread.
 	
+
+	TCP_SOCK_class::TCP_SOCK_class():SOCKETS(NULL),ADDRINFO(NULL)	// The default build method.
+	{
+		/*	Clear memory.	*/
+		memset(Host_Name,'\0',128);
+		memset(&ADDR_M,'\0',sizeof(struct sockaddr_in)),ADDR_T=ADDR_M;
+		memset(&Main,'\0',sizeof(struct pollfd)),Thread=Main;
+		/*	Set default time.	*/
+		Wait_IO_Time_Main=Wait_IO_Time_DownUp=5;
+
+		/*	Get memory and create sockets.	*/
+		SOCKETS=new int[1][2];	//	16B
+		if (NULL == SOCKETS)
+		{
+			State_Of_Initialization_SOCK=false;
+			syslog(LOG(LOG_ERR),"FTPR_SOCK: Can not allocs memory.");	
+			return;
+		}
+		else;
+
+		// Sockets.
+		**SOCKETS=_SOCKET_(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+		*(*SOCKETS+1)=_SOCKET_(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+
+		// Check.
+		if (**SOCKETS < 0 || *(*SOCKETS+1) < 0)
+			State_Of_Initialization_SOCK=false;
+		else;
+
+	}
+
 	TCP_SOCK_class::TCP_SOCK_class(unsigned short int Comm_Port,unsigned short int FT_Port,unsigned short int Main_Timing,unsigned short int Thread_Timing)
 	{
 		//	Suppose the state was succeed.
 		State_Of_Initialization_SOCK=true;
+
+
+		/*	Initialize.	*/
 		ADDRINFO=NULL;
 		SOCKETS=NULL;
+		memset(&ADDR_M,'\0',sizeof(struct sockaddr_in));
+		memset(&ADDR_T,'\0',sizeof(struct sockaddr_in));
+		memset(&Main,'\0',sizeof(struct pollfd));
+		memset(&Thread,'\0',sizeof(struct pollfd));
+		memset(Host_Name,'\0',sizeof(Host_Name));
 
 		// Open option.
 		int Switch(1);	// For socket option.
@@ -61,9 +105,8 @@ namespace SOCKET{
 		}
 		else
 		{
-			if ((Returninfo=getaddrinfo("localhost",NULL,&Control,&ADDRINFO)) == 0)	//	Get host info.
+			if ((Returninfo=getaddrinfo(Host_Name,NULL,&Control,&ADDRINFO)) == 0)	//	Get host info.
 			{
-				syslog(LOG(LOG_NOTICE),"FTPR_SOCK: Initialization succee init SOCK.");
 				syslog(LOG(LOG_NOTICE),"FTPR_SOCK: Host : %s  IP : %s .",Host_Name,inet_ntoa(((struct sockaddr_in *)ADDRINFO->ai_addr)->sin_addr));
 
 				//	Set server address in IPv4.
@@ -109,7 +152,7 @@ namespace SOCKET{
 								State_Of_Initialization_SOCK=false;
 							}
 							else	
-								syslog(LOG(LOG_INFO),"FTPR_SOCK: Initialized for sockets.");
+								syslog(LOG(LOG_INFO),"FTPR_SOCK: Success to initialized socket interface.");
 
 						}
 					}
@@ -127,7 +170,7 @@ namespace SOCKET{
 		
 			#ifdef DEBUG
 				syslog(LOG(LOG_ERR),"Code : %d .",Returninfo);
-				syslog(LOG(LOG_ERR),"EAI_ADDRFAMILY : %d."EAI_ADDRFAMILY);
+				syslog(LOG(LOG_ERR),"EAI_ADDRFAMILY : %d.",EAI_ADDRFAMILY);
 				syslog(LOG(LOG_ERR),"EAI_AGAIN : %d.",EAI_AGAIN);
 				syslog(LOG(LOG_ERR),"EAI_BADFLAGS : %d.",EAI_BADFLAGS);
 				syslog(LOG(LOG_ERR),"EAI_FAIL : %d.",EAI_FAIL);
@@ -285,7 +328,65 @@ namespace SOCKET{
 		}
 	}
 
+	void TCP_SOCK_class::_SET_WAIT_TIME_(const short int Which,const unsigned short int & Timing_Seconds)
+	{
+		switch (Which)
+		{
+			case MAIN_SOCKET:
+				Wait_IO_Time_Main=Timing_Seconds;
+				break;
+			case THREAD_SOCKET:
+				Wait_IO_Time_DownUp=Timing_Seconds;
+			default:
+				syslog(LOG(LOG_NOTICE),"FTPR_SOCK: Set time flag had not defined.");
+		}
 
+	}
+	
+	inline unsigned short int TCP_SOCK_class::_GET_WAIT_TIME_(const short int Which)
+	{
+		switch (Which)
+		{
+			case MAIN_SOCKET:
+				return Wait_IO_Time_Main;
+			case THREAD_SOCKET:
+				return Wait_IO_Time_DownUp;
+			default:
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Flag get time had not defined.");
+				return 0;
+		}
+	}
+
+	struct pollfd TCP_SOCK_class::_GET_POLLFD_(const short int Which)
+	{
+		switch (Which)
+		{
+			case MAIN_SOCKET:
+				return Main;
+			case THREAD_SOCKET:
+				return Thread;
+			default:
+				syslog(LOG(LOG_NOTICE),"FTPR_SOCK: Get poll object the flag had not defined.");
+				return Main;
+		}
+
+	}
+
+	void TCP_SOCK_class::_SET_POLLFD_(const short int Which,struct pollfd & New_Target)
+	{
+		switch (Which)
+		{
+			case MAIN_SOCKET:
+				Main=New_Target;
+				break;
+
+			case THREAD_SOCKET:
+				Thread=New_Target;
+				break;
+			default:
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Poll set flag no defined.");
+		}
+	}
 
 	/*	I/O multi-reuse.	*/
 	 int TCP_SOCK_class::_POLL_(const short int Which_To_Wait)
@@ -309,27 +410,92 @@ namespace SOCKET{
 		}		
 	}
 
-	void TCP_SOCK_class::_POLL_SET_(int SocketWait,const short int Which,const int Event)
+	void TCP_SOCK_class::_SET_PORT_(const short int Which,const unsigned short int PORT)
 	{
 		switch (Which)
 		{
 			case MAIN_SOCKET:
-				
-				Main.fd=SocketWait;
-				Main.events=Event;	
+				ADDR_M.sin_port=_HTONS_(PORT);
 				break;
-
 			case THREAD_SOCKET:
-	
-				Thread.fd=SocketWait;
-				Thread.events=Event;
+				ADDR_T.sin_port=_HTONS_(PORT);
 				break;
 			default:
-				;
-
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Set port flag had not defined.");
 		}
 	}
 
+	unsigned short int TCP_SOCK_class::_GET_PORT_(const short int Which)
+	{
+		switch (Which)
+		{
+			case MAIN_SOCKET:
+				return _NTOHS_(ADDR_M.sin_port);
+			case THREAD_SOCKET:
+				return _NTOHS_(ADDR_T.sin_port);
+			default:
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Get port flag had not defined.(Return 0)");
+				return 0;
+		}
+	}
+
+	void TCP_SOCK_class::_SET_ADDR_(const short int Which,struct sockaddr *NewAddr)
+	{
+		switch (Which)
+		{
+			case MAIN_SOCKET:
+				ADDR_M=*(struct sockaddr_in *)NewAddr;
+				break;
+			case THREAD_SOCKET:
+				ADDR_T=*(struct sockaddr_in *)NewAddr;
+				break;
+			default:
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Set addr flag had not defined.");
+		}
+	}
+
+	struct sockaddr_in TCP_SOCK_class::_GET_ADDR_(const short int Which)
+	{
+		switch (Which)
+		{
+			case MAIN_SOCKET:
+				return ADDR_M;
+			case THREAD_SOCKET:
+				return ADDR_T;
+			default:
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Get addr had not defined.(Return comm)");
+				return ADDR_M;
+		}
+	}
+
+	int TCP_SOCK_class::_GET_SOCKET_(const short int Which)
+	{
+		switch (Which)
+		{
+			case MAIN_SOCKET:	// Ge main socket.For communition.
+				return **SOCKETS;
+			case THREAD_SOCKET:	// Get thread socket.For download and upload.
+				return *(*SOCKETS+1);
+			default:	// None defined.
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Don't know which socket want to get.");
+				return -1;
+		}
+	}
+
+	void TCP_SOCK_class::_SET_SOCKET_(const short int Which,const int New_Sock)
+	{
+		switch (Which)
+		{
+			case MAIN_SOCKET:
+				**SOCKETS=New_Sock;
+				break;
+			case THREAD_SOCKET:
+				*(*SOCKETS+1)=New_Sock;
+				break;
+			default:
+				syslog(LOG(LOG_ERR),"FTPR_SOCK: Set socket flag had not defined.");
+		}
+	}
 	/*	Get socket option.	*/
 	 int TCP_SOCK_class::_GETSOCKOPT_(const short int Which,int LEVEL,int OPTNAME,void* OPTVAL,socklen_t* OPTLEN)
 	{
@@ -422,19 +588,7 @@ namespace SOCKET{
 		return Had_Written;	// Return really to written.
 	}	
 
-	int TCP_SOCK_class::_Get_Socket_(const short int Which)
-	{
-		switch (Which)
-		{
-			case MAIN_SOCKET:	// Ge main socket.For communition.
-				return **SOCKETS;
-			case THREAD_SOCKET:	// Get thread socket.For download and upload.
-				return *(*SOCKETS+1);
-			default:	// None defined.
-				syslog(LOG(LOG_ERR),"FTPR_SOCK: Don't know which socket to get.");
-				return -1;
-		}
-	}
+
 
 	inline int TCP_SOCK_class::_SHUTDOWN_(int SOCKFD,int HOWTO)
 	{

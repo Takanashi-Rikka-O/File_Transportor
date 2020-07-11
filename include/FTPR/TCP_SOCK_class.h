@@ -43,6 +43,8 @@ namespace SOCKET{
 
 	//	This class is a zone of tcp socket.
 
+
+
 	class TCP_SOCK_class{
 
 		private:	//	Private zone.
@@ -79,33 +81,29 @@ namespace SOCKET{
 
 		public:		//	Public zone.
 
+
+
+
 			//	Monitoring status.
 			bool State_Of_Initialization_SOCK;
 
 			// Default build.
-			TCP_SOCK_class(unsigned short int Comm_Port=4396,unsigned short int FT_Port=33242,unsigned short int Main_Timing=10,unsigned short int DownUp_Timing=10);
+			TCP_SOCK_class();	// This method will be invoking by client.
+			// Other build method.	
+			TCP_SOCK_class(unsigned short int Comm_Port,unsigned short int FT_Port,unsigned short int Main_Timing,unsigned short int DownUp_Timing);
 			~TCP_SOCK_class();	//	clear.
 
-			/*	Host byte order convertion.	*/
+			// Build
 
-			//	_HTONS_ and _NTOHS_ are respone port convert.	
-			uint16_t _HTONS_(uint16_t HOST16BITVALUE);	
-			uint16_t _NTOHS_(uint16_t NET16BITVALUE);
-					
-			//	_INET_PTON_ and _INET_NTOP_ are respone IPv4/IPv6 address convert.	
-			/*	Print to net.	*/
-			int _INET_PTON_(int FAMILY,const char* STRPTR,void* ADDRPTR);
-			/*	Net to print.	*/
-			const char* _INET_NTOP_(int FAMILY,const void* ADDRPTR,char* STRPTR,size_t LEN);
-
-			/*	Open netdb and get host info.	*/
-			struct hostent* _GETHOSTBYNAME_(const char* HOST);	// Search host infomation in net database.
+			/*	Network socket IO functions	*/
+			ssize_t _READ_SOCK_(const int SocketI,void *Net_Buffer,const size_t To_Read);	// If read a '\0',reading 
+			ssize_t _WRITE_SOCK_(const int SocketW,const void *Net_Buffer,const size_t To_Write);	
 
 			/*	Bind NSAP with TSAP.	*/
 			int _BIND_(const short int Which);	// Try to bind a socket.
 								// If client bind a socket and then connect to server,the network asynchronize error will 
 								// return to client process.
-
+								//
 			/*	Make a connection.	*/
 			int _CONNECT_(const short int Which);	// Try to connect.
 
@@ -121,15 +119,14 @@ namespace SOCKET{
 			//		SHUT_RD , shut read down.
 			//		SHUT_WR , shut write down.
 			//		SHUT_RDWR , shut I/O down.
-			
+
+
+			// Socket
+
+
 			/*	Wait network event arrive.	*/
 			int _POLL_(const short int Which_To_Wait);
 			/* For simply to use this class,user could not specify pollfd array and timeout,but user must specify wait which event.	*/
-			
-
-			// M_Or_D control set which pollfd.
-			void _POLL_SET_(int SocketWait,const short int Which,const int Event);	
-			// Use this function must apply a constraint,the arraies must as int-0 end.
 
 			bool _Check_Main_(const int Event)	// If revent by poll is equal to this parameter,return true.
 			{
@@ -139,21 +136,67 @@ namespace SOCKET{
 			bool _Check_Thread_(const int Event)	// If revent by poll is equal to this parameter,return true.
 			{
 				return (Event == Thread.revents)?true:false;
-			}			
+			}
+
+			// Poll
+
+
+			/*	Host byte order convertion.	*/
+			//	_HTONS_ and _NTOHS_ are respone port convert.	
+			uint16_t _HTONS_(uint16_t HOST16BITVALUE);	
+			uint16_t _NTOHS_(uint16_t NET16BITVALUE);
+
+			//	_INET_PTON_ and _INET_NTOP_ are respone IPv4/IPv6 address convert.	
+			/*	Print to net.	*/
+			int _INET_PTON_(int FAMILY,const char* STRPTR,void* ADDRPTR);
+			/*	Net to print.	*/
+			const char* _INET_NTOP_(int FAMILY,const void* ADDRPTR,char* STRPTR,size_t LEN);
+
+
+			// Convertion
+
+			/*	Set poll wait time.	*/
+			void _SET_WAIT_TIME_(const short int Which,const unsigned short int & Timing_Seconds);	// For reset time limit.
+
+			/*	Get poll wait time.	*/
+			unsigned short int _GET_WAIT_TIME_(const short int Which);
+
+			/*	Get poll structure.	*/
+			void _SET_POLLFD_(const short int Which,struct pollfd & New_Target);	
+
+			/*	Get poll structure.	*/
+			struct pollfd _GET_POLLFD_(const short int Which);			// For get poll info.
+
+			/*	Get port.		*/
+			unsigned short int _GET_PORT_(const short int Which);
+
+			/*	Set port.		*/
+			void _SET_PORT_(const short int Which,const unsigned short int PORT);
+
+			/*	Open netdb and get host info.	*/
+			struct hostent* _GETHOSTBYNAME_(const char* HOST);	// Search host infomation in net database.
+			
+			/*	Set address structure.	*/
+			void _SET_ADDR_(const short int Which,struct sockaddr *NewAddr);
+			
+			/*	Get address structure.	*/
+			struct sockaddr_in _GET_ADDR_(const short int Which);
+		
 	
 			/*	Get and Set socket options.	*/
 			int _GETSOCKOPT_(const short int Which,int LEVEL,int OPTNAME,void* OPTVAL,socklen_t* OPTLEN);
 			int _SETSOCKOPT_(const short int Which,int LEVEL,int OPTNAME,const void* OPTVAL,socklen_t OPTLEN);
 
+
+			int _GET_SOCKET_(const short int Which);
+			void _SET_SOCKET_(const short int Which,const int New_Sock);
+
 			/*	Get host name.	*/
 			int _GETHOSTNAME_(char* HOSTNAME,const size_t BUFF_LEN);
 
-			/*	Network socket IO functions	*/
-			ssize_t _READ_SOCK_(const int SocketI,void *Net_Buffer,const size_t To_Read);	// If read a '\0',reading 
-			ssize_t _WRITE_SOCK_(const int SocketW,const void *Net_Buffer,const size_t To_Write);	
-	
-			int _Get_Socket_(const short int Which);
 
+
+			// Get/Set objects
 	};
 
 
