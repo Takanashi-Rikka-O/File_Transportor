@@ -26,8 +26,8 @@
 //
 //	Fix : 
 
-#ifndef _FTPR_CLIENT_CLASS_H_
-#define _FTPR_CLIENT_CLASS_H_
+#ifndef _FTPR_CLIENT_H_
+#define _FTPR_CLIENT_H_
 
 
 /*	Headers		*/
@@ -60,6 +60,7 @@
 #define C_TAKE_INVALID_STR 4	// From inet_pton.
 #define C_TAKE_INVALID_FAMILY 5 // From inet_pton.
 
+extern bool Client_Should_Be_Stop;	// For prevent definitions more than once.
 
 /*	Define zone.	*/
 
@@ -67,7 +68,7 @@ namespace FTPR_CLIENT{
 
 	using namespace FTPR;		// Basic class.
 
-	extern bool Client_Should_Be_Stop;	// For prevent definition than once.
+
 
 
 
@@ -77,7 +78,7 @@ namespace FTPR_CLIENT{
 	
 	using Client_Init=struct Init_Client_FC{
 				const struct Shared_Setting & FSS;	// Shared settings set.
-				const unsigned short int RTL;		// Retry to make link.
+				unsigned short int RTL;		// Retry to make link.
 				const char * & DP;			// Download path.
 			};
 

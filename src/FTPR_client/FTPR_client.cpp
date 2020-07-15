@@ -14,12 +14,13 @@
 //			<Shutdown client>
 //			<Take ip:port>
 //			<signals>
+//			<init client>
 //
 //		As lib :
 //			# For upgrade.
 //			<client workup>
 //			<read setting>
-//			<init client>
+//
 //
 //	Functions :
 //		void _LS_(const int & Comm_Sock,char * & Buffer);
@@ -703,26 +704,6 @@ namespace FTPR_CLIENT{
 		/*	TCP and FID had defined the default build method for client.	*/
 		/*	So client do not have to apply a init ordef for all classes.	*/
 
-		FIDC=new FID_class;	// This will invoke the default build method.
-		if (NULL == FIDC)
-		{
-			syslog(LOG(LOG_ERR),"FTPR_Client: Can not create File&Directory interface.");
-			goto _Init_FC_Return;
-		}
-		else
-			if (FIDC->State_Of_Initialization_FID)
-				if (chdir(Init_Set->DP) > 0)	// Make a illusion that is while FIDC init it would change directory.
-					;
-				else
-				{
-					syslog(LOG(LOG_ERR),"FTPR_Client: Can not change directory to download path.");
-					goto _Init_FC_Return;
-				}
-			else
-			{
-				syslog(LOG(LOG_ERR),"FTPR_Client: Can not init File&Directory interface.");
-				goto _Init_FC_Return;
-			}
 
 		TSC=new TCP_SOCK_class;
 		if (NULL == TSC)
@@ -769,8 +750,28 @@ namespace FTPR_CLIENT{
 				goto _Init_FC_Return;
 			}
 		
+		FIDC=new FID_class;	// This will invoke the default build method.
+		if (NULL == FIDC)
+		{
+			syslog(LOG(LOG_ERR),"FTPR_Client: Can not create File&Directory interface.");
+			goto _Init_FC_Return;
+		}
+		else
+			if (FIDC->State_Of_Initialization_FID)
+				if (chdir(Init_Set->DP) > 0)	// Make a illusion that is while FIDC init it would change directory.
+					;
+				else
+				{
+					syslog(LOG(LOG_ERR),"FTPR_Client: Can not change directory to download path.");
+					goto _Init_FC_Return;
+				}
+			else
+			{
+				syslog(LOG(LOG_ERR),"FTPR_Client: Can not init File&Directory interface.");
+				goto _Init_FC_Return;
+			}
 
-		Function_Result=1;	// We hope function would process to there.
+		Function_Result=0;	// We hope function would process to there.
 
 		//	Primary
 
@@ -798,6 +799,120 @@ namespace FTPR_CLIENT{
 		syslog(LOG(LOG_NOTICE),"FTPR_Client: FTPR_Client quit...");
 
 		//	Primary
+	}
+
+
+
+	bool FTPR_client_class::_Client_Init_(void)	/*	This function have not to as a piece in shared library.	*/
+	{
+		/*	At first to invoke _Read_Setting_ for get configure optionals.	*/
+		/*	If have not error had detected,then invoke _Init_FC_ to initialize feature classes.	*/
+		/*	If have not error had detected in _Init_FC_,then return true.	*/
+		/*	Once failed for setting and init will return false from this function.	*/
+		
+		//	Get DownloadPath memory space.
+		DownloadPath=new char[pathconf("/",_PC_PATH_MAX)];	// _PC_PATH_MAX constant could get system limit for path max length.
+		if (NULL == DownloadPath)	/* Check */
+		{
+			cerr<<"FTPR_Client: Client can not get memory for save downloadpath."<<endl;
+			return false;
+		}
+		else;
+		//	Memory if succeed to alloced,it will be destroied by _Client_ShutDown_.
+
+		
+		bool Client_Init_State(true);	// Suppose it's success.
+		short int Invoke_Result(-1);	// The setting function and init function all return 0 on success and all return -1 on fail.	
+		Client_Init Client_Optionals={
+				.FSS=Share_Set,
+				.RTL=0,			// This variable must reset after _Read_Setting_ finished.
+				.DP=(const char *&)DownloadPath,
+			};	// This structure object contains the shared setting object-pointer and client settings which uniqued.
+
+		//	Env
+		
+
+		cout<<"CONFIG FILE : "<<CONFIG_FILE<<endl;
+
+		/*	Try to read settings.	*/
+		Invoke_Result=_Read_Setting_(CONFIG_FILE);
+
+		if (Invoke_Result < 0)
+		{
+			Client_Init_State=false;
+			cerr<<"FTPR_Client: Client failed to read configure optionals."<<endl;
+		}
+		else
+		{
+			cout<<"FTPR_Client: Client succeed to reading setting options."<<endl;
+			Client_Optionals.RTL=Retry_ToLink;	// Reset it.
+		}
+
+		/*	Try to initializing feature classes.	*/
+		
+		if (Client_Init_State)
+		{
+			Invoke_Result=_Init_FC_(&Client_Optionals);
+			if (Invoke_Result < 0)
+				Client_Init_State=false;
+			else
+			{
+				// Set signal action.
+			
+				// SIGTERM		 Termination.
+				// SIGINT		 Interrupt.
+				// SIGHUP		 HungUp.
+				// SIGALRM		 Alarm.
+
+				/*	Block set had filled.	*/
+				SYSS->_SIGDELSET_(BLOCK_SET,SIGTERM);
+				SYSS->_SIGDELSET_(BLOCK_SET,SIGINT);
+				SYSS->_SIGDELSET_(BLOCK_SET,SIGHUP);
+				SYSS->_SIGDELSET_(BLOCK_SET,SIGALRM);
+				
+				// Change block set of this process.
+				SYSS->_SIGPROCMASK_(SIG_SETMASK,NULL);
+
+				// End to set mask.
+
+				// Set actions for tar get signals.
+
+				SYSS->_SIGADDSET_(NORMAL_SET,SIGINT);
+				SYSS->_SIGACTION_(SIGTERM,Sigaction_Client_Sigterm);
+				SYSS->_SIGDELSET_(NORMAL_SET,SIGINT);
+				SYSS->_SIGADDSET_(NORMAL_SET,SIGTERM);
+				SYSS->_SIGACTION_(SIGINT,Sigaction_Client_Sigint);
+			
+				SYSS->_SIGDELSET_(NORMAL_SET,SIGINT);
+				SYSS->_SIGACTION_(SIGHUP,Sigaction_Client_Sighup);
+				SYSS->_SIGACTION_(SIGALRM,Sigaction_Client_Sigalrm);
+		
+
+				cout<<"FTPR_Client: Client succeed to initializing feature modes."<<endl;
+			}
+		}
+		else;
+
+		//	Primary
+
+
+		return Client_Init_State;
+
+		//	Return
+	}
+
+
+
+	void FTPR_client_class::_Client_(void)
+	{
+		//	If init had not successfully,print failed message and quit.
+		if (_Client_Init_())
+		{
+			cout<<"FTPR_Client: ftprc had initialized successfully!"<<endl;
+			_Client_WorkUp_();
+		}
+		else
+			cerr<<"FTPR_Client: Failed to init program."<<endl;
 	}
 
 	void FTPR_client_class::_Client_ShutDown_(void)
@@ -831,6 +946,14 @@ namespace FTPR_CLIENT{
 			delete FIDC;
 			FIDC=NULL;
 			syslog(LOG(LOG_NOTICE),"FTPR_Client: Destroied file&directory interface.");
+		}
+		else;
+
+		if (DownloadPath)
+		{
+			delete[] DownloadPath;
+			DownloadPath=NULL;
+			syslog(LOG(LOG_NOTICE),"FTPR_Client: Destroied path space memory.");
 		}
 		else;
 

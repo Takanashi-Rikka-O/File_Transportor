@@ -19,7 +19,8 @@
 #		None.
 #
 #	Fixs :
-#		> Append a null byte to end.
+#		1> Append a null byte to end.
+#		2> Rewrite cycle code,ensures copy the latest byte.
 
 .text
 .code64

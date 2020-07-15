@@ -42,6 +42,9 @@ Transfer_Verbose :
 	# For client.Client will call connect to make link with server,by the time,kernel will alloc a port to be use for it.And also could bind a stable 
 	# port.But there does not need to receive socket error from transfer layout.
 
+
+Server and Client - (As possible as pointer destroying finish on the where is them have been alloced space.)
+
 Server :
 	
 	Name :	FTPR_server
@@ -452,7 +455,7 @@ Working_Verbose :
 	of listen queue is equal to '1'.So the same time can only services one of user.After user connected,wait command from peer,and then parsing command
 	do some work.Server can not be shutdown by peer,must send signal to server process by system manager.When server is running,setting can not be 
 	changed,if want to change some setting,must close process at first and change setting file then restart it.And for optimize effect,whild client call
-	once 'up file' after,server to remake items linked-list.(Not doint that for 'ls')
+	once 'up file' after,server to remake items linked-list.(Not doing that for 'ls')
 
 	Client : 
 		Client would set enviornment when it has been running.Create FTPR_client object,the class object initialization.Entry user inactive mode.

@@ -33,6 +33,7 @@ ALLOBJS=$(ServerDeps) $(ClientDeps) $(CommonDeps)	# All object target.
 # Primary path of build files.
 vpath %.cpp src/FTPR
 vpath %.cpp src/FTPR_server
+vpath %.cpp src/FTPR_client
 vpath %.cpp lib/
 vpath %.s fobj
 
@@ -47,17 +48,27 @@ $(LIBS):%.so:%.cpp
 Hint_Message:
 	@echo "Please specify target : clean/server/client/destroy"
 
+# Server
 server:$(ServerDeps) $(ShareLib) $(AsmOBJ) $(CommonDeps)
 	$(CC) $(CFLAGS) -o ftprsd $(ServerDeps) $(CommonDeps) $(AsmOBJ) -lFTPR_Basic -lFTPR_THREAD -lpthread
 	ldconfig
 	@if [ ! -e $(CONFIGUREDIR) ]; \
 	then \
 		mkdir $(CONFIGUREDIR); \
-		mkdir $(C_CONFIGUREDIR); \
 		mkdir $(S_CONFIGUREDIR); \
 	fi
-	cp FTPR_client.conf $(C_CONFIGUREDIR)
 	cp FTPR_server.conf $(S_CONFIGUREDIR)
+
+# Client
+client:$(ClientDeps) $(ShareLib) $(AsmOBJ) $(CommonDeps) $(ShareLibClient)
+	$(CC) $(CFLAGS) -o ftprc $(ClientDeps) $(AsmOBJ) $(CommonDeps) -lFTPR_Basic -lFTPR_THREAD -lpthread -lFTPR_Client
+	ldconfig
+	@if [ ! -e $(CONFIGUREDIR) ]; \
+	then \
+		mkdir $(CONFIGUREDIR); \
+		mkdir $(C_CONFIGUREDIR); \
+	fi
+	cp FTPR_client.conf $(C_CONFIGUREDIR)
 
 $(AsmOBJ):_Copy_String_.s
 	as --gstabs -o $@ $<

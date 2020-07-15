@@ -343,7 +343,7 @@ namespace SOCKET{
 
 	}
 	
-	inline unsigned short int TCP_SOCK_class::_GET_WAIT_TIME_(const short int Which)
+	unsigned short int TCP_SOCK_class::_GET_WAIT_TIME_(const short int Which)
 	{
 		switch (Which)
 		{
