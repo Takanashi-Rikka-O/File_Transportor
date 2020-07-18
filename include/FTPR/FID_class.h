@@ -1,7 +1,7 @@
 //	FID_class.h
 //	Version : 0.1
 //	Date : Sat May 23 15:14:05 2020
-//	Last revise : Sat May 23 15:14:05 2020
+//	Last revise : Sat Jul 18 21:21:? 2020
 //	Symbol-Constraint :
 //			_Xx..._ - Function Symbol
 //			Xx...|x|X - Variable Symbol
@@ -22,6 +22,11 @@
 //		<dirent.h>		//	Directory operation.
 //		<cstdbool>		//	ISO C bool type.
 //		<cstdarg>		//	ISO C args.
+//
+//	FIX :
+//		1> Adjustment build method and record format.(Now when class was created it will make program change work home.)
+//		2> Adding remake list function.
+//		3> New mechanism that when list had reset,_TRAVERSE_ will reset pointer and subscriptor.
 
 #ifndef _FID_CLASS_H_
 #define _FID_CLASS_H_
@@ -74,6 +79,9 @@ namespace FID{
 			void _CLEAR_LIST_(DIL* NODE);	//	Clear list.
 
 			int FID_TempFile;
+
+			bool If_List_Had_ReMade;	// This variable for record whether directory items list had changed.
+
 		public:
 
 

@@ -1,7 +1,7 @@
 //	TCP_SOCK_class.cpp
 //	Version : 0.1.2
 //	Date : Sat May 23 15:12:36 2020
-//	Last revise : Sat May 23 15:12:36 2020
+//	Last revise : Sat Jul 18 21:19:? 2020
 //	Symbol-Constraint :
 //			_Xx..._ - Function Symbol
 //			Xx...|x|X - Variable Symbol
@@ -16,9 +16,12 @@
 //		1> Change method for get host information when processing in server.
 //		2> Adding new build method for client.
 //		3> Adding interfaces for change data-members.
+//		4> New interface _RESET_SOCKETS_ for reset sockets.
+//		5> Shutdown will invoke close to set off the file descriptor for that number can reuse.
 
 
 #include"TCP_SOCK_class.h"
+
 
 namespace SOCKET{
 
@@ -34,7 +37,9 @@ namespace SOCKET{
 		memset(&ADDR_M,'\0',sizeof(struct sockaddr_in)),ADDR_T=ADDR_M;
 		memset(&Main,'\0',sizeof(struct pollfd)),Thread=Main;
 		/*	Set default time.	*/
-		Wait_IO_Time_Main=Wait_IO_Time_DownUp=5;
+		Wait_IO_Time_Main=Wait_IO_Time_DownUp=5000;
+
+		State_Of_Initialization_SOCK=true;	// Suppose it is succeed.
 
 		/*	Get memory and create sockets.	*/
 		SOCKETS=new int[1][2];	//	16B
@@ -52,7 +57,10 @@ namespace SOCKET{
 
 		// Check.
 		if (**SOCKETS < 0 || *(*SOCKETS+1) < 0)
+		{
 			State_Of_Initialization_SOCK=false;
+			syslog(LOG(LOG_ERR),"FTPR_SOCK: Can not create sockets.");
+		}
 		else;
 
 	}
@@ -107,7 +115,12 @@ namespace SOCKET{
 		{
 			if ((Returninfo=getaddrinfo(Host_Name,NULL,&Control,&ADDRINFO)) == 0)	//	Get host info.
 			{
-				syslog(LOG(LOG_NOTICE),"FTPR_SOCK: Host : %s  IP : %s .",Host_Name,inet_ntoa(((struct sockaddr_in *)ADDRINFO->ai_addr)->sin_addr));
+				syslog(LOG(LOG_NOTICE),"FTPR_SOCK: Host : %s  IP : %s Port1 : %hu Port2 : %hu ."
+					,Host_Name
+					,inet_ntoa(((struct sockaddr_in *)ADDRINFO->ai_addr)->sin_addr)
+					,Comm_Port
+					,FT_Port
+					);
 
 				//	Set server address in IPv4.
 
@@ -337,6 +350,7 @@ namespace SOCKET{
 				break;
 			case THREAD_SOCKET:
 				Wait_IO_Time_DownUp=Timing_Seconds;
+				break;
 			default:
 				syslog(LOG(LOG_NOTICE),"FTPR_SOCK: Set time flag had not defined.");
 		}
@@ -394,13 +408,14 @@ namespace SOCKET{
 		// User must call this function called _POLL_SET_ before.
 		switch (Which_To_Wait)
 		{
-			case MAIN_SOCKET:	// Main
+			/*	poll use milliseconds to wait object.	*/
 
-				return poll(&Main,1,Wait_IO_Time_Main);		
+			case MAIN_SOCKET:	// Main
+				return poll(&Main,1,Wait_IO_Time_Main*1000);		
 
 			case THREAD_SOCKET:	// Thread.
 				
-				return poll(&Thread,1,Wait_IO_Time_DownUp);
+				return poll(&Thread,1,Wait_IO_Time_DownUp*1000);
 
 			default:
 				// The flag does not defined.Return -2.
@@ -586,13 +601,47 @@ namespace SOCKET{
 				break;
 		}
 		return Had_Written;	// Return really to written.
-	}	
+	}
 
 
-
-	inline int TCP_SOCK_class::_SHUTDOWN_(int SOCKFD,int HOWTO)
+	int TCP_SOCK_class::_SHUTDOWN_(int SOCKFD,int HOWTO)
 	{
-			return shutdown(SOCKFD,HOWTO);
+			int Return(shutdown(SOCKFD,HOWTO));
+			(void)close(SOCKFD);
+			return Return;
+	}
+
+	bool TCP_SOCK_class::_RESET_SOCKETS_(const unsigned short int Which)
+	{
+		switch (Which)
+		{
+			case MAIN_SOCKET:
+				(void)_SHUTDOWN_(**SOCKETS,SHUT_RDWR);	// Close old.
+				if ((**SOCKETS=_SOCKET_(AF_INET,SOCK_STREAM,IPPROTO_TCP)) < 0) // Open new socket.
+					return false;
+				else
+					return true;
+
+			case THREAD_SOCKET:
+				(void)_SHUTDOWN_(*(*SOCKETS+1),SHUT_RDWR);
+				if ((*(*SOCKETS+1)=_SOCKET_(AF_INET,SOCK_STREAM,IPPROTO_TCP)) < 0)
+					return false;
+				else	
+					return true;
+
+			case MAIN_SOCKET|THREAD_SOCKET:		// Recursive.
+				if (_RESET_SOCKETS_(MAIN_SOCKET))
+					if (_RESET_SOCKETS_(THREAD_SOCKET))
+						return true;
+					else
+						return false;
+				else
+					return false;
+
+			default:
+				return false;
+		}
+
 	}
 }
 

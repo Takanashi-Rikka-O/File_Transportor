@@ -142,6 +142,9 @@ namespace FTPR{
 		}
 
 		syslog(LOG(LOG_ERR),LogMsg);	// Record.
+		#ifdef DEBUG
+		syslog(LOG(LOG_ERR),"FTPR: Value is %d",Value);
+		#endif
 	}
 
 }

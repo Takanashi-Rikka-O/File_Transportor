@@ -64,7 +64,7 @@ namespace FTPR{
 				Result+=(*The_End-'0')*Base;
 
 		#ifdef DEBUG
-			syslog(LOG(LOG_NOTICE),"FTPR: Option : %s Get Number : %d .",Option,Result);
+			syslog(LOG(LOG_ERR),"FTPR: Option : %s Get Number : %d .",Option,Result);
 		#endif
 
 		return Result;	// Return number.

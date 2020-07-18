@@ -1,7 +1,7 @@
 //	TCP_SOCK_class.h
 //	Version : 0.2
 //	Date : Fri May 29 10:26:56 2020
-//	Last revise : Sat Jun 29 22:48:? 2020
+//	Last revise : Sat Jul 18 21:20:? 2020
 //	Symbol-Constraint :
 //			_Xx..._ - Function Symbol
 //			Xx...|x|X - Variable Symbol
@@ -25,6 +25,7 @@
 //		2> Delete _Set_Port_ function,because ports must be assigned in build method,now.
 //		3> Default use socket option SO_REUSEPORT in level SOL_SOCKET for [1] port.
 //		4> Adjustment record format.
+//		5> Adding new interface for reset sockets.
 
 #ifndef _TCP_SOCK_CLASS_H_
 #define _TCP_SOCK_CLASS_H_
@@ -96,8 +97,9 @@ namespace SOCKET{
 			// Build
 
 			/*	Network socket IO functions	*/
-			ssize_t _READ_SOCK_(const int SocketI,void *Net_Buffer,const size_t To_Read);	// If read a '\0',reading 
-			ssize_t _WRITE_SOCK_(const int SocketW,const void *Net_Buffer,const size_t To_Write);	
+			ssize_t _READ_SOCK_(const int SocketI,void *Net_Buffer,const size_t To_Read);
+			ssize_t _WRITE_SOCK_(const int SocketW,const void *Net_Buffer,const size_t To_Write);
+			
 
 			/*	Bind NSAP with TSAP.	*/
 			int _BIND_(const short int Which);	// Try to bind a socket.
@@ -119,6 +121,8 @@ namespace SOCKET{
 			//		SHUT_RD , shut read down.
 			//		SHUT_WR , shut write down.
 			//		SHUT_RDWR , shut I/O down.
+
+			bool _RESET_SOCKETS_(const unsigned short int Which);
 
 
 			// Socket

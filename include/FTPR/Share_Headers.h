@@ -3,6 +3,8 @@
 #ifndef _SHARE_HEADERS_H_
 #define _SHARE_HEADERS_H_
 
+#define _GNU_SOURCE_	/*	For poll revents - POLLRDHUP.	*/
+
 #include<unistd.h>	/*	UNIX Interfaces			*/
 #include<fcntl.h>	/*	UNIX File control		*/
 #include<sys/types.h>	/*	UNIX System types		*/

@@ -72,7 +72,7 @@ namespace FTPR{
 		// Because translater would alloc memory for variables left at them be using.
 		// So could not initialize them.
 
-		short int FF_Code(FF_NO_PROBLEM);	// Error code.
+		short int FF_Code(0);	// Error code.
 		pthread_t Timer_TID;	// This variable save timer' TID.
 		unsigned short int Retry;	// This variable only used by client.
 		short int Invoke_Result(-1);	// Function invoke result.
@@ -82,7 +82,7 @@ namespace FTPR{
 		TMC Timer_Argument;	// Timer structure.
 
 		struct sockaddr_in Addr;	// Save peer address.
-		socklen_t Addr_Size;		// Structure size.
+		socklen_t Addr_Size(sizeof(struct sockaddr_in));	// Structure size.
 		char Address_Str[16];		// xxx.xxx.xxx.xxx
 
 		int New_Socket(-1);	// Temp socket.
@@ -167,7 +167,10 @@ namespace FTPR{
 				// Client have to link with server,if failed will retry until limit.
 				for (Retry=FF_FGU->Net_io->Retry_Link; Retry > 0; --Retry)
 					if ((Invoke_Result=FF_FGU->Tcp_sock->_CONNECT_(THREAD_SOCKET)) < 0)
+					{
+						FF_FGU->Tcp_sock->_RESET_SOCKETS_(THREAD_SOCKET);	// Reset socket when connect invoking failed.
 						continue;
+					}
 					else
 						break;
 
@@ -180,6 +183,7 @@ namespace FTPR{
 					FF_FGU->Thread->_UNLOCK_MUTEX_();
 					goto _Thread_FF_QUIT_;
 				}
+
 				break;
 			default:
 				FF_Code=FF_ID_ERR;
@@ -228,7 +232,8 @@ namespace FTPR{
 			// Server record link info.
 			case SERVER_ID:
 				// Write a record to log.
-				syslog(LOG(LOG_NOTICE),"FTPR_FF: Connected by %s .",FF_FGU->Tcp_sock->_INET_NTOP_(Addr.sin_family,&Addr.sin_addr,Address_Str,16));
+				syslog(LOG(LOG_NOTICE),"FTPR_FF: Connected by %s ."
+					,FF_FGU->Tcp_sock->_INET_NTOP_(Addr.sin_family,&Addr.sin_addr,Address_Str,16));
 				// Check which behavior GET or UP.
 				// Adding new feature,when in the stage 'UP_FILE',sever call 'poll' to wait data.
 
@@ -238,6 +243,7 @@ namespace FTPR{
 					case GET_FILE:		// Client request to get a file.
 						Invoke_Result=_Thread_FF_Up_(FF_FGU,FileIOB,FF_FGU->Net_io->Network_File_IO_Buffer,New_Socket);
 						FF_Code=(Invoke_Result == -1)?FF_GET_ERR:FF_GET_SUSS;
+						
 						break;
 
 					case UP_FILE:		// Client request to up a file.
@@ -257,6 +263,7 @@ namespace FTPR{
 				switch (FF_FGU->Net_io->What_Behavior)
 				{
 					case GET_FILE:
+
 						// Download file from server.
 						Invoke_Result=_Thread_FF_Get_(FF_FGU,FileIOB,FF_FGU->Net_io->Network_File_IO_Buffer,New_Socket);
 						FF_Code=(Invoke_Result == -1)?FF_GET_ERR:FF_GET_SUSS;
@@ -287,9 +294,16 @@ namespace FTPR{
 
 			/*	Server process this code will close the socket which had bind.	*/
 			/*	Client process this code will close the link had connected.	*/
-			FF_FGU->Tcp_sock->_SHUTDOWN_(FF_FGU->Tcp_sock->_GET_SOCKET_(THREAD_SOCKET),SHUT_RDWR);
+//			FF_FGU->Tcp_sock->_SHUTDOWN_(FF_FGU->Tcp_sock->_GET_SOCKET_(THREAD_SOCKET),SHUT_RDWR);
 			// File descriptor will be closing by caller.			
-			pthread_exit(&FF_Code);	// quit thread.	
+		
+			#ifdef DEBUG
+
+			syslog(LOG(LOG_ERR),"Thread: FF_Code is %hd",FF_Code);
+
+			#endif
+
+			pthread_exit((void *)FF_Code);	// quit thread.	
 
 
 			// While pthread_exit is invoke,cleanup handler will be processing.	
@@ -323,10 +337,17 @@ namespace FTPR{
 			if (Tool->Tcp_sock->_Check_Thread_(POLLRDNORM))
 			{
 				Retry=Tool->Net_io->Retry_Number;	// Reset.
-				Last_Read=Tool->Tcp_sock->_READ_SOCK_(TmpSocket,Buff,Buff_Len);
-				if (Tool->Fid->_WRITE_FILE_(TmpFile,Buff,Last_Read) < 0)
-					Return_Value=-1;
-				else;
+				if ((Last_Read=Tool->Fid->_READ_FILE_(TmpSocket,Buff,Buff_Len)) > 0)
+					if (Tool->Fid->_WRITE_FILE_(TmpFile,Buff,Last_Read) < 0)
+						Return_Value=-1;
+					else;
+				else
+					break;
+			}
+			else if (Tool->Tcp_sock->_Check_Thread_(POLLRDHUP))
+			{
+				Return_Value=0;
+				break;
 			}
 			else
 				--Retry;

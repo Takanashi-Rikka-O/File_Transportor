@@ -14,7 +14,7 @@ S_CONFIGUREDIR=$(CONFIGUREDIR)/server
 # Translater option.
 
 CC=g++
-CFLAGS=-Wall -g -std=c++11 -Iinclude/FTPR -Iinclude/FTPR_server -Iinclude/FTPR_client
+CFLAGS=-Wall -g -std=c++11 -Iinclude/FTPR -Iinclude/FTPR_server -Iinclude/FTPR_client -DDEBUG
 
 ServerDeps=FTPR_server.o FTPR_server_main.o
 ClientDeps=FTPR_client.o FTPR_client_main.o
@@ -23,7 +23,7 @@ CommonDeps=FTPR.o FID_class.o THREAD_class.o TCP_SOCK_class.o SYSTEM_SIGNAL_clas
 AsmOBJ=_Copy_String_.o	# Assembly function.
 
 ShareLib=libFTPR_Basic.so libFTPR_THREAD.so	# Shared libs.
-ShareLibServer=
+ShareLibServer=libFTPR_Server.so
 ShareLibClient=libFTPR_Client.so
 LIBS=$(ShareLib) $(ShareLibServer) $(ShareLibClient)
 
@@ -49,8 +49,9 @@ Hint_Message:
 	@echo "Please specify target : clean/server/client/destroy"
 
 # Server
-server:$(ServerDeps) $(ShareLib) $(AsmOBJ) $(CommonDeps)
-	$(CC) $(CFLAGS) -o ftprsd $(ServerDeps) $(CommonDeps) $(AsmOBJ) -lFTPR_Basic -lFTPR_THREAD -lpthread
+server:$(ServerDeps) $(ShareLib) $(AsmOBJ) $(CommonDeps) $(ShareLibServer)
+	$(CC) $(CFLAGS) -o ftprsd $(ServerDeps) $(CommonDeps) $(AsmOBJ) -lFTPR_Basic -lFTPR_THREAD -lFTPR_Server -lpthread
+	mv --interactive ftprsd bin/
 	ldconfig
 	@if [ ! -e $(CONFIGUREDIR) ]; \
 	then \
@@ -62,6 +63,7 @@ server:$(ServerDeps) $(ShareLib) $(AsmOBJ) $(CommonDeps)
 # Client
 client:$(ClientDeps) $(ShareLib) $(AsmOBJ) $(CommonDeps) $(ShareLibClient)
 	$(CC) $(CFLAGS) -o ftprc $(ClientDeps) $(AsmOBJ) $(CommonDeps) -lFTPR_Basic -lFTPR_THREAD -lpthread -lFTPR_Client
+	mv --interactive ftprc bin/
 	ldconfig
 	@if [ ! -e $(CONFIGUREDIR) ]; \
 	then \
@@ -78,6 +80,6 @@ clean:
 
 # Pay a notice on there,do not adding option '-r' for 'rm'.
 destroy:
-	@rm --interactive ftprsd /usr/lib/libFTPR_Basic.so /usr/lib/libFTPR_THREAD.so
+	@rm --interactive ftprsd ftprc /usr/lib/libFTPR_Basic.so /usr/lib/libFTPR_THREAD.so /usr/lib/libFTPR_Client.so /usr/lib/libFTPR_Server.so
 
 

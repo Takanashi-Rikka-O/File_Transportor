@@ -1,7 +1,7 @@
 //	FTPR_client.cpp
 //	Version : 0.1
 //	Date : Sat Jul  4 14:42:06 2020
-//	Last revise : Sat Jul  4 14:42:06 2020
+//	Last revise : Sat Jul  18 21:16:? 2020
 //	Symbol-Constraint :
 //			_Xx..._ - Function Symbol
 //			Xx...|x|X - Variable Symbol
@@ -114,9 +114,13 @@ namespace FTPR_CLIENT{
 
 		// Cycle to check,and at this action will record ':'.
 
+		#ifdef DEBUG
+			cout<<"String : "<<TargetStr<<" Len : "<<StrLength<<endl;
+		#endif
+
 		for (unsigned short int index(0); index < StrLength && Right_Format; ++index)
 		{
-			if (TargetStr[index] <= 9 && TargetStr[index] >= 0)
+			if (TargetStr[index] <= '9' && TargetStr[index] >= '0')
 				continue;
 			else if ('.' == TargetStr[index])
 				++Found_point;
@@ -132,12 +136,16 @@ namespace FTPR_CLIENT{
 		{
 			// Try to convert IP.
 			TargetStr[Splite_Char]='\0';	// ':' -> '\0'.
-			int Convert_Result(TSC->_INET_PTON_(Addr->sa_family,TargetStr,&Addr));
-			// 0 success,1 valid string,-1 valid family.
+			int Convert_Result(TSC->_INET_PTON_(((struct sockaddr_in *)Addr)->sin_family,TargetStr,&((struct sockaddr_in *)Addr)->sin_addr));
+			// 1 success,0 valid string,-1 valid family.
+
+			#ifdef DEBUG
+				cerr<<"IP: "<<TargetStr<<" Port : "<<&TargetStr[Splite_Char+1]<<endl;
+			#endif
 
 			switch (Convert_Result)
 			{
-				case 1:
+				case 0:
 					State=C_TAKE_INVALID_STR;
 					break;
 				case -1:
@@ -147,21 +155,32 @@ namespace FTPR_CLIENT{
 					// Try to get port.
 					//	Left	<-	Right.
 					for (unsigned short int i(Splite_Char),j(StrLength-1),base(1); j != i; --j,base*=10)
-						Port_Number+=(TargetStr[j]-'\0')*base;
+						Port_Number+=(TargetStr[j]-'0')*base;
 
 					// Check result.
 					if (Port_Number > 65535)
 						State=C_TAKE_PORT_TOO_LARGE;
 					else
 					{
-						((struct sockaddr_in &)Addr).sin_port=TSC->_HTONS_(Port_Number);
+						((struct sockaddr_in *)Addr)->sin_port=TSC->_HTONS_(Port_Number);
 						State=C_TAKE_SUSS;
 					}
+
+					#ifdef DEBUG
+						cerr<<"Port_Number : "<<Port_Number<<endl;
+					#endif
 			}
 		
 		}
 		else
+		{
 			State=C_TAKE_ERR;
+
+			#ifdef DEBUG
+				cerr<<"Check : "<<Right_Format<<" Found point : "<<Found_point<<" Found splite : "<<Found_splite
+				<<endl<<" Port_Number : "<<Port_Number<<endl;
+			#endif
+		}
 
 
 		return State;
@@ -176,6 +195,7 @@ namespace FTPR_CLIENT{
 		const unsigned short int OldTime_Limit(TSC->_GET_WAIT_TIME_(MAIN_SOCKET));	// Backup.
 		unsigned short int Retry(2);	// Retry limit.
 		ssize_t ReallyRead(0);	// Really read.
+		bool Cycle_Continue(true);	// Cycle controllor.
 
 		// Set new time limit.
 		TSC->_SET_WAIT_TIME_(MAIN_SOCKET,3);	// 3s.
@@ -185,7 +205,7 @@ namespace FTPR_CLIENT{
 
 		// Poll set by caller.
 
-		while (true && ! Client_Should_Be_Stop)
+		while (Cycle_Continue && ! Client_Should_Be_Stop)
 		{
 			if (Retry != 0)	// Retry check
 				;
@@ -195,26 +215,26 @@ namespace FTPR_CLIENT{
 				break;
 			}	
 
-			if (TSC->_POLL_(MAIN_SOCKET) != -1)
+			if (TSC->_POLL_(MAIN_SOCKET) != -1)	// If return -1,that is means had an error happended.
 			{
-				if (TSC->_Check_Main_(POLLRDNORM))
+				if (TSC->_Check_Main_(POLLRDNORM))	// TCP could read.
 				{
-					ReallyRead=TSC->_READ_SOCK_(Comm_Sock,Buffer,Buffer_Len);	// Socket read.
-					if (ReallyRead > 0u)
+					if ((ReallyRead=FIDC->_READ_FILE_(Comm_Sock,Buffer,Buffer_Len-1)) > 0)
 					{
-						if (strncmp(Buffer,"#EOF#\0",6) == 0)	// Check if it is end.
-							break;
-						else
-							Buffer[ReallyRead]='\0';	// Append end of string.
+						Retry=2;	// Retry limit reset.
 
-						cout<<Buffer<<endl;	// View item name.
-						Retry=2;	// Reset retry.
+
+
+						for (unsigned short int i(0); i < ReallyRead; ++i)
+							if ('\0' == Buffer[i])
+								Buffer[i]='\n';
+							else;
+						Buffer[ReallyRead]='\0';
+						Cycle_Continue=(strstr(Buffer,"#EOF#") != NULL)?false:true;
+						cout<<Buffer;
 					}
 					else
-					{
-						cerr<<"FTPR_Client: ls failed."<<endl;	// Read return zero or a negative number.
 						break;
-					}
 				}
 				else
 					--Retry; // Timeout.
@@ -222,6 +242,8 @@ namespace FTPR_CLIENT{
 			else
 				syslog(LOG(LOG_NOTICE),"FTPR_Server: _LS_ poll had detected an error.");
 		}
+
+
 
 		
 		// At end,must restore socket env.
@@ -241,12 +263,23 @@ namespace FTPR_CLIENT{
 		TSC->_SET_WAIT_TIME_(MAIN_SOCKET,3);	// New time limit.
 		
 		/*	Send command to server.	*/
-		TSC->_WRITE_SOCK_(Comm_Sock,Buffer,strlen(Buffer));
+		//TSC->_WRITE_SOCK_(Comm_Sock,Buffer,strlen(Buffer));
+
+		if (TSC->_WRITE_SOCK_(Comm_Sock,Buffer,strlen(Buffer)) > 0);
+		else
+			cerr<<"FTPR_Client: Send command failed."<<endl;
+
+		#ifdef DEBUG
+			cerr<<"Buffer : "<<Buffer<<endl;
+		#endif
 
 		if (TSC->_POLL_(MAIN_SOCKET) != -1)
 			if (TSC->_Check_Main_(POLLRDNORM))
 			{
-				ReallyRead=TSC->_READ_SOCK_(Comm_Sock,Buffer,Buffer_Len);	// Read socket.
+				//ReallyRead=TSC->_READ_SOCK_(Comm_Sock,Buffer,Buffer_Len);	// Read socket.
+
+				ReallyRead=FIDC->_READ_FILE_(Comm_Sock,Buffer,64);
+
 				if (ReallyRead > 0u)
 				{
 					Buffer[ReallyRead]='\0';
@@ -324,7 +357,7 @@ namespace FTPR_CLIENT{
 		if (TSC->_Check_Main_(POLLRDNORM))	// Check event.
 		{
 			memset(Msg_Buff,'\0',128);	// Clear invalid data.
-			if (TSC->_READ_SOCK_(Comm_Sock,Msg_Buff,128) <= 0)	// Read message.
+			if (FIDC->_READ_FILE_(Comm_Sock,Msg_Buff,128) <= 0)	// Read message.
 			{
 				cerr<<"FTPR_Client: Failed to read message."<<endl;
 				goto _GET_FILE_Return;
@@ -388,7 +421,7 @@ namespace FTPR_CLIENT{
 			PTC->_JOIN_THREAD_(Downloader,(void **)&DownState);
 
 			// Check status.
-			if (*DownState == FF_GET_SUSS)
+			if ((long int)DownState == FF_GET_SUSS)
 			{
 				cout<<"FTPR_Client: Succeed to receive file."<<endl;
 				if (fstat(TmpFile,&For_Target_File) < 0)	// Get tempfile info
@@ -487,7 +520,7 @@ namespace FTPR_CLIENT{
 		if (TSC->_Check_Main_(POLLRDNORM))
 		{
 			memset(Msg_Buff,'\0',128);	// Clear invalid data.
-			TSC->_READ_SOCK_(Comm_Sock,Msg_Buff,127);
+			FIDC->_READ_FILE_(Comm_Sock,Msg_Buff,128);
 			if (0 == strncmp(Msg_Buff,"#UPINFO#",8))
 				TSC->_WRITE_SOCK_(Comm_Sock,&File_Info,sizeof(GET_UP));	// Send target file info.
 			else
@@ -507,7 +540,7 @@ namespace FTPR_CLIENT{
 		if (TSC->_Check_Main_(POLLRDNORM))
 		{
 			memset(Msg_Buff,'\0',128);	// Clear invalid data.
-			TSC->_READ_SOCK_(Comm_Sock,Msg_Buff,127);
+			FIDC->_READ_FILE_(Comm_Sock,Msg_Buff,128);
 			if (0 == strncmp(Msg_Buff,"#OK#",4))
 				if (TSC->_READ_SOCK_(Comm_Sock,&File_Info,sizeof(GET_UP)) != sizeof(GET_UP))	// Server had fill port field.
 					cerr<<"FTPR_Client: Receive file info had error."<<endl;
@@ -533,12 +566,12 @@ namespace FTPR_CLIENT{
 					PTC->_LOCK_MUTEX_();	// Lock up again.
 					PTC->_JOIN_THREAD_(Uploader,(void **)&UpState);	// Wait thread.
 				
-					if (*UpState == FF_UP_SUSS)
+					if ((long int)UpState == FF_UP_SUSS)
 						cout<<"FTPR_Client: Finished upload file,please use 'ls' to check status"<<endl;
 					else
 						cerr<<"FTPR_Client: Failed to upload file."<<endl;
 
-					_FTPR_Logger_(*UpState);
+					_FTPR_Logger_((long int)UpState);
 	
 		
 					PTC->_UNLOCK_MUTEX_();	// Release lock.
@@ -562,7 +595,7 @@ namespace FTPR_CLIENT{
 		//	Return
 	}
 
-	bool FTPR_client_class::_LINK_(const int & Comm_Sock)	// 'true' on success,'false' on error.
+	bool FTPR_client_class::_LINK_()	// 'true' on success,'false' on error.
 	{
 		bool Function_State(false);	// Suppose it's false.
 
@@ -570,6 +603,7 @@ namespace FTPR_CLIENT{
 		if (NULL == IP_Addr)	// Check.
 			return Function_State;
 		else;
+
 		short int Invoke_Result(-1);	// For function calling.
 		struct sockaddr_in *Server_Addr=new struct sockaddr_in;
 		if (NULL == Server_Addr)
@@ -606,14 +640,28 @@ namespace FTPR_CLIENT{
 		TSC->_SET_ADDR_(MAIN_SOCKET,(struct sockaddr *)Server_Addr);	// Set main address structure.
 		TSC->_SET_ADDR_(THREAD_SOCKET,(struct sockaddr *)Server_Addr);	// Because in same host.
 
+		#ifdef DEBUG
+
+		cerr<<"IP : "<<TSC->_INET_NTOP_(AF_INET,(void *)&Server_Addr->sin_addr,IP_Addr,32)<<endl;
+		cerr<<"Port : "<<TSC->_GET_PORT_(MAIN_SOCKET)<<endl;
+
+		#endif
+
+
 		for (unsigned short int i(Retry_ToLink); i > 0; --i)
 			if (TSC->_CONNECT_(MAIN_SOCKET) < 0)	// This is to connect communication socket.
-				continue;
+			{
+				cerr<<"FTPR_Client: Failed to make connection with server."<<endl;
+				TSC->_RESET_SOCKETS_(MAIN_SOCKET);
+				sleep(1);
+			}
 			else
 			{
 				Function_State=true;	// Succeed.
 				break;
 			}
+				
+
 
 		//	Primaray
 
@@ -719,6 +767,8 @@ namespace FTPR_CLIENT{
 				syslog(LOG(LOG_ERR),"FTPR_Client: Can not init socket interface.");
 				goto _Init_FC_Return;
 			}
+		
+		cout<<"FTPR_Client: Succeed to create socket interface."<<endl;
 
 		PTC=new THREAD_class;
 		if (NULL == PTC)
@@ -735,6 +785,8 @@ namespace FTPR_CLIENT{
 				goto _Init_FC_Return;
 			}
 
+		cout<<"FTPR_Client: Succeed to create posix thread interface."<<endl;
+
 		SYSS=new SYSTEM_SIGNAL_class;
 		if (NULL == SYSS)
 		{
@@ -749,6 +801,8 @@ namespace FTPR_CLIENT{
 				syslog(LOG(LOG_ERR),"FTPR_Client: Can not init signal interface.");
 				goto _Init_FC_Return;
 			}
+
+		cout<<"FTPR_Client: Succeed to create signal thread interface."<<endl;
 		
 		FIDC=new FID_class;	// This will invoke the default build method.
 		if (NULL == FIDC)
@@ -758,11 +812,11 @@ namespace FTPR_CLIENT{
 		}
 		else
 			if (FIDC->State_Of_Initialization_FID)
-				if (chdir(Init_Set->DP) > 0)	// Make a illusion that is while FIDC init it would change directory.
-					;
+				if (chdir(Init_Set->DP) == 0)	// Make a illusion that is while FIDC init it would change directory.
+					cerr<<"FTPR_Client: Current work home is - "<<Init_Set->DP<<endl;
 				else
 				{
-					syslog(LOG(LOG_ERR),"FTPR_Client: Can not change directory to download path.");
+					syslog(LOG(LOG_ERR),"FTPR_Client: Can not change directory to download path - %s .",Init_Set->DP);
 					goto _Init_FC_Return;
 				}
 			else
@@ -770,6 +824,8 @@ namespace FTPR_CLIENT{
 				syslog(LOG(LOG_ERR),"FTPR_Client: Can not init File&Directory interface.");
 				goto _Init_FC_Return;
 			}
+
+		cout<<"FTPR_Client: Succeed to create file operation interface."<<endl;
 
 		Function_Result=0;	// We hope function would process to there.
 
@@ -830,9 +886,6 @@ namespace FTPR_CLIENT{
 			};	// This structure object contains the shared setting object-pointer and client settings which uniqued.
 
 		//	Env
-		
-
-		cout<<"CONFIG FILE : "<<CONFIG_FILE<<endl;
 
 		/*	Try to read settings.	*/
 		Invoke_Result=_Read_Setting_(CONFIG_FILE);

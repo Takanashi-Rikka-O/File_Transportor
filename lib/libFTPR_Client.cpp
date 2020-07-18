@@ -88,8 +88,6 @@ namespace FTPR_CLIENT{
 					Reader.clear();
 			else;
 
-			cout<<"Temp_Buff is : "<<Temp_Buff<<endl;
-
 			if (0 == strncmp(Temp_Buff,"DPATH",5))
 			{
 				/*	The DownloadPath must be alloced by _Client_Init_,this function not checking it whether is not NULL.	*/
@@ -117,14 +115,16 @@ namespace FTPR_CLIENT{
 
 		/*	Check state.	*/
 		// Whether is EOF to broken.
-		if (Reader.eof())
+		if (Reader.eof() || 0 == Client_Options)
 		{
 			cerr<<"FTPR_Client: Succeed to read configure file."<<endl;
+			(void)Reader.close();
 			return 0;
 		}
 		else
 		{
 			cerr<<"FTPR_Client: Detected an error in reading configure file."<<endl;
+			(void)Reader.close();
 			return -1;
 		}
 
@@ -142,6 +142,10 @@ namespace FTPR_CLIENT{
 
 		char *CommBuff(NULL);	// Buffer for message and command.
 		int Comm_Socket=TSC->_GET_SOCKET_(MAIN_SOCKET);	// Communication socket.
+		struct pollfd Comm_Target={
+					.fd=Comm_Socket,
+					.events=POLLRDNORM,
+				};
 		
 		// These structure for 'get file' and 'up file' commant to be ready.
 		NETIOINFO Network_Parameter={
@@ -172,7 +176,6 @@ namespace FTPR_CLIENT{
 		}
 		else;
 
-	
 		/*	Entry initiactive cycle.	*/
 		/*	The outer layout is 'link' command.	*/
 		/*	The inner layout is others command.	*/
@@ -184,7 +187,9 @@ namespace FTPR_CLIENT{
 		while (true && ! Client_Should_Be_Stop)
 		{
 
-			cout<<"FTPR_Client: Please use 'link' command to make new connection with server in the front!"<<endl;
+			cout<<"FTPR_Client: "<<endl
+				<<"\tPlease use 'link' command to make new connection with server in the front! (extra - 'exit' 'help')"
+				<<endl<<"> ";
 			cin.getline(CommBuff,Share_Set.Message_Buff_Size);
 			
 			// Prevent cin class set fail bit,so must check the bit switch.
@@ -195,8 +200,19 @@ namespace FTPR_CLIENT{
 			// Check input.
 
 			if (0 == strncmp(CommBuff,"link",4))
-				if (_LINK_(Comm_Socket))
+				if (_LINK_())
+				{
 					cout<<"FTPR_Client: Succeed to make connection."<<endl;
+					Comm_Socket=TSC->_GET_SOCKET_(MAIN_SOCKET);
+					Comm_Target.fd=Comm_Socket;
+					Comm_Target.events=POLLRDNORM;
+					TSC->_SET_POLLFD_(MAIN_SOCKET,Comm_Target);
+
+					#ifdef DEBUG
+						cerr<<"FTPR_Client: Socket - "<<Comm_Socket<<endl;
+					#endif
+
+				}
 				else
 				{
 					cerr<<"FTPR_Client: Link failed."<<endl;
@@ -207,6 +223,8 @@ namespace FTPR_CLIENT{
 				_HELP_();
 				continue;
 			}
+			else if (0 == strncmp(CommBuff,"exit",4))
+				break;
 			else
 			{
 				cerr<<"FTPR_Client: Must make link at first."<<endl;
@@ -225,12 +243,11 @@ namespace FTPR_CLIENT{
 
 				// Check command.
 
-				_Command_Parsing_(CommBuff);	// Commands parasing.
-				memset(CommBuff,'\0',Share_Set.Message_Buff_Size);	// Clear memory.
+				_Command_Parsing_(CommBuff);	// Commands parasing.	
 
 				switch (The_CMD_Hit.CMDN)
 				{
-					case LS:
+					case LS:				
 						_LS_(Comm_Socket,CommBuff,Share_Set.Message_Buff_Size);
 						break;
 
@@ -249,7 +266,6 @@ namespace FTPR_CLIENT{
 						break;
 
 					case LOGOUT:
-						TSC->_SHUTDOWN_(Comm_Socket,SHUT_RDWR);
 						goto _LOGOUT_;
 
 					case EXIT:
@@ -265,10 +281,17 @@ namespace FTPR_CLIENT{
 				}
 
 
+				memset(CommBuff,'\0',Share_Set.Message_Buff_Size);	// Clear memory.
+
+
 			} while (true && ! Client_Should_Be_Stop);
 
 			_LOGOUT_:
-				;
+
+				if (TSC->_RESET_SOCKETS_(MAIN_SOCKET|THREAD_SOCKET))	// Close all socket.
+					cerr<<"FTPR_Client: Succeed to close link."<<endl;
+				else
+					cerr<<"FTPR_Client: Failed to reset socket."<<endl;
 		}
 
 

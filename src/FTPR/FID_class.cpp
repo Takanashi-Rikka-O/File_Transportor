@@ -1,7 +1,7 @@
 //	FID_class.cpp
 //	Version : 0.2.1
 //	Date : Sat May 23 15:12:12 2020
-//	Last revise : Sat Jul 17 11:03:? 2020
+//	Last revise : Sat Jul 18 21:21:? 2020
 //	Symbol-Constraint :
 //			_Xx..._ - Function Symbol
 //			Xx...|x|X - Variable Symbol
@@ -15,25 +15,29 @@
 //	Header :
 //		"FID_class.h"
 //	Fix :
-//		1> Adjustment build method and record format.(Now when class was be created it will make program change work home.)
+//		1> Adjustment build method and record format.(Now when class was created it will make program change work home.)
 //		2> Adding remake list function.
+//		3> New mechanism that when list had reset,_TRAVERSE_ will reset pointer and subscriptor.
 
 
 #include"FID_class.h"
-#include<iostream>
 
 
 namespace FID{
 
 
 	// Client must use this function init FID class.
-	FID_class::FID_class():State_Of_Initialization_FID(true)
+	FID_class::FID_class()
 	{
 		// Because _CHDIR_ will make a linked-list,but client need not use that.
 		// This method for preparation of client to init FID.
 		// Server never should not to use this function.
-	
+
+
 		/*	Initialize.	*/
+		State_Of_Initialization_FID=true;	// Client suppose succeed to init.
+		If_List_Had_ReMade=false;	// Client will not use this boolean.
+
 		Work_Home=NULL;
 		Root_Home=NULL;
 		Directory=NULL;
@@ -61,7 +65,7 @@ namespace FID{
 		FDES_OPENED=new int[Current_Length_FDES];	// A pointer point to a int type mem.
 		if (NULL == FDES_OPENED)
 		{
-			syslog(LOG(LOG_NOTICE),"FTPR_FID: Can not allocs memory for fdes.");
+			syslog(LOG(LOG_ERR),"FTPR_FID: Can not allocs memory for fdes.");
 			State_Of_Initialization_FID=false;
 			return;
 		}
@@ -88,6 +92,7 @@ namespace FID{
 		//	State
 
 		State_Of_Initialization_FID=true;	//	Suppose it's succeed.
+		If_List_Had_ReMade=false;	// Record boolean.
 
 		// Initialize.
 		Directory=NULL;
@@ -149,13 +154,14 @@ namespace FID{
 		{
 			// If succeed to get root home memory,will invoke chroot to change root path at first.
 			_Copy_String_(Root_Home,Work_Home,strlen(Work_Home));
-			if (chroot(Root_Home) < 0)
+		/*	if (chroot(Root_Home) < 0)
 			{
 				State_Of_Initialization_FID=false;
 				syslog(LOG(LOG_ERR),"FTPR_FID: Failed to change root path.");
 				return;
 			}
 			else;
+		*/
 		}
 
 
@@ -214,6 +220,7 @@ namespace FID{
 			syslog(LOG(LOG_INFO),"FTPR_FID: Clear linked-list.");
 			_CLEAR_LIST_(List_Head);
 			List_Head=NULL;	
+			If_List_Had_ReMade=true;
 		}
 		else;
 
@@ -490,6 +497,8 @@ namespace FID{
 
 		DIL *Temp_ptr(List_Head);
 
+		If_List_Had_ReMade=true;	// Changed.
+
 		while ((DIR_BUF=_READ_DIR_()))
 		{
 			if (*DIR_BUF->d_name == '.' && (*(DIR_BUF->d_name+1) == '.' || *(DIR_BUF->d_name+1) == '\0'))	// Jump across to . and .. ;
@@ -545,6 +554,7 @@ namespace FID{
 		{
 			_CLEAR_LIST_(List_Head);
 			List_Head=NULL;
+			If_List_Had_ReMade=true;
 		}
 		else;
 
@@ -565,12 +575,26 @@ namespace FID{
 		static DIL* Next_Pos(List_Head);	//	Head start.
 		static short int Node_Num(0);
 
+		if (If_List_Had_ReMade)
+		{
+			Next_Pos=List_Head;
+			Node_Num=0;
+			If_List_Had_ReMade=false;	// This function reset it.Because it will use this boolean as reset condition.
+		}
+		else;
+
 		if (Next_Pos && Node_Num < Current_Length_List)	//	Otherwise is a null list or list around.
 		{
 			//	Get length.
 			size_t Name_Len=strlen(Next_Pos->Item_Name);
 
 			_Copy_String_(DNAME,Next_Pos->Item_Name,Name_Len);
+
+			#ifdef DEBUG
+
+			syslog(LOG(LOG_NOTICE),"FTPR_FID: Copied - %s ",DNAME);
+
+			#endif
 
 			Next_Pos=Next_Pos->Next;	//	Update,before next calling entry the next node.
 			++Node_Num;			//	Next number.

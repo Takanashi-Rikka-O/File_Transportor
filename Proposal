@@ -593,7 +593,7 @@ Library: !!!
 		"FTPR' Thread-IO & Timer"
 		Make them as shared lib could new design thread function as quickly as it process.
 
-		'FTPR Server or Client Read-shared-setting"
+		'FTPR Server or Client Read-setting"
 		The reason is like "FTPR Read-shared-setting"
 
 		'FTPR Server or Client command responer"
@@ -603,5 +603,12 @@ Enviornment :
 	GNU/Linux Centos 7 - 1062 x86_x64
 	glibc-2.17
 	gnu/gcc 4.85
+
+
+
+
+
+
+##	All had been completing,the left work is optimize this program.
 
 

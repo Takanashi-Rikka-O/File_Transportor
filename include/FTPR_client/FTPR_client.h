@@ -1,7 +1,7 @@
 //	FTPR_client.h
 //	Version : 0.1
 //	Date : Sat Jul  4 14:41:38 2020
-//	Last revise : Sat Jul  4 14:41:38 2020
+//	Last revise : Sat Jul  18 21:17:? 2020
 //	Symbol-Constraint :
 //			_Xx..._ - Function Symbol
 //			Xx...|x|X - Variable Symbol
@@ -112,7 +112,7 @@ namespace FTPR_CLIENT{
 			void _CD_(const int & Comm_Sock,char * & Buffer,const size_t & Buffer_Len);
 			void _GET_FILE_(const int & Comm_Sock,FGU & Env_GET);
 			void _UP_FILE_(const int & Comm_Sock,FGU & Env_UP);
-			bool _LINK_(const int & Comm_Sock);
+			bool _LINK_();
 	
 			// logout have not to define a function to do work.
 			// exit also have not to define a function to do work.

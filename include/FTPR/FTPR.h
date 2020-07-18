@@ -69,7 +69,6 @@
 
 
 /*	There define some error codes of Thread_FF.	*/
-#define FF_NO_PROBLEM 0	// FF normaly started.
 #define FF_SET_CANCEL_STATE_ERR 1	// Can not set cancel enable.
 #define FF_SET_CANCEL_TYPE_ERR 2	// Can not set cancel type.
 #define FF_BIND_SOCKET_ERR 3		// Can not bind listen socket.

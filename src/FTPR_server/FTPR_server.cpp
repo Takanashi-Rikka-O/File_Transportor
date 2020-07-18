@@ -1,7 +1,7 @@
 //	FTPR_server.cpp
 //	Version : 0.2.1
 //	Date : Fri Jun 12 10:31:41 2020
-//	Last revise : Sat Jul 11 11:05:? 2020
+//	Last revise : Sat Jul 18 21:18:? 2020
 //	Symbol-Constraint :
 //			_Xx..._ - Function Symbol
 //			Xx...|x|X - Variable Symbol
@@ -25,10 +25,6 @@
 #include"FTPR_server.h"
 
 namespace FTPR_SERVER{
-
-
-
-
 
 
 // Define signal action.
@@ -61,122 +57,6 @@ namespace FTPR_SERVER{
 	void _Server_Signal_Sigalrm_(int Sig,siginfo_t *Receive_Info,void *Content)
 	{
 		syslog(LOG(LOG_NOTICE),"FTPR_Server: Signal %d SIGALRM received from %u - ignores",Receive_Info->si_signo,Receive_Info->si_pid);
-	}
-
-
-
-
-
-	// C++ standard io.
-	using std::ifstream;
-	using std::ios;
-
-	// Virtual Functions in protected.
-	// And for simply to update,will make this function as a share lib.
-	short int FTPR_Server_class::_Read_Setting_(const char *Setting_File)
-	{
-		#ifdef DEBUG
-
-		syslog(LOG(LOG_NOTICE),"FTPR_Server: Configure file - %s.",Setting_File);
-
-		#endif
-
-		// For make same format to return function code,declare a variable.
-		short int _Read_Setting_Code(0);
-
-
-		// Get reading buffer.
-		char *Setting_Buffer=new char[64+1];	// 64B.
-		if (! Setting_Buffer)
-		{
-			_Read_Setting_Code=S_RS_GET_MEM_ERR;	
-			return _Read_Setting_Code;
-		}
-		else;
-		
-		// Temporary string position pointer.
-		char *Temp_Char_Pointer(NULL);
-
-		// Temporary value for get number.
-		int Temporary_Value(0);
-	
-
-		// FTPR_Basic had been defined setting read function for shared settings.
-		// When it succeed to read,return true.
-		if (FTPR_Basic::_Read_Shared_Setting_(Setting_File))
-			;
-		else
-		{
-			
-			_Read_Setting_Code=S_RS_SHARE_SET_ERR;
-			delete[] Setting_Buffer;
-			return _Read_Setting_Code;
-		}
-
-		ifstream Read;	// Define a ifstream object.
-		Read.open(Setting_File,ios::in);	// ASCII input.
-
-		/* Check it was succeed to opened.	*/
-		if (Read.is_open())
-			;
-		else
-		{
-			_Read_Setting_Code=S_RS_OPEN_CONFIG_ERR;
-			delete[] Setting_Buffer;
-			return _Read_Setting_Code;
-		}
-
-		// Entry a cycle to read unique setting optionals.
-		// Stop while fail bit set out.
-		while (true)
-		{
-
-			Read.getline(Setting_Buffer,65);	// Read 64B
-			if (Read.eof())	// If eof,break cycle.
-				break;
-			else if (Read.fail())	// This case is normaly to be caused by left characters in stream but had readed the max limit.
-			{
-				Read.clear();
-				continue;
-			}
-			else;
-
-			if ('#' == *Setting_Buffer || '\0' == *Setting_Buffer) // Skip comment.
-				continue;
-			else
-			{
-				if (strncmp(Setting_Buffer,"DUPORT",6) == 0)
-					DownUp_Port=((Temporary_Value=FTPR_Basic::_Get_Number_Of_Optional_(Setting_Buffer)) > 0)?Temporary_Value:Default_DUPORT;
-				else if (strncmp(Setting_Buffer,"CWAITS",6) == 0)
-					Comm_Wait_Seconds=((Temporary_Value=FTPR_Basic::_Get_Number_Of_Optional_(Setting_Buffer) > 0))?Temporary_Value:Default_CWAITS;
-				else if (strncmp(Setting_Buffer,"CPORT",5) == 0)
-					Comm_Port=((Temporary_Value=FTPR_Basic::_Get_Number_Of_Optional_(Setting_Buffer) > 0))?Temporary_Value:Default_CPORT;
-				else if (strncmp(Setting_Buffer,"RPATH",5) == 0)			
-				{
-					Temp_Char_Pointer=strstr(Setting_Buffer,"=");
-					if (*(Temp_Char_Pointer+1) != '\0')
-						_Copy_String_(Root_Path,Temp_Char_Pointer+1,strlen(Temp_Char_Pointer+1));
-					else
-						_Copy_String_(Root_Path,Default_RPATH,10);
-				}
-				else;
-			}
-		}
-
-		// Check it is normaly finished.
-		if (Read.eof())
-			_Read_Setting_Code=S_RS_SET_OVER;
-		else
-			_Read_Setting_Code=S_RS_SET_ERR;
-		
-		// Close file.
-		Read.clear();	// Flush flag.
-		Read.close();
-		
-		delete[] Setting_Buffer;
-
-		return _Read_Setting_Code;
-
 	}
 
 
@@ -332,6 +212,8 @@ namespace FTPR_SERVER{
 		Server_Set_Config.DUP=DownUp_Port;
 		Server_Set_Config.CPT=Comm_Port;
 		Server_Set_Config.Root_Path=Root_Path;
+
+		syslog(LOG(LOG_ERR),"FTPR_Server: Set - DUP : %hu , CPT : %hu , RP : %s .",DownUp_Port,Comm_Port,Root_Path);
 		
 		// At second,initialize variables.
 		// These will be setting in read setting stage.
@@ -399,246 +281,36 @@ namespace FTPR_SERVER{
 
 
 
-	void FTPR_Server_class::_Server_WorkUp_(void)
-	{
-	
-		_Server_Logger_(S_ENTRY_WORK);	// Entrance record.
-		
-		char *UserCmd(NULL);
-		try{
-			// For command buffer.
-			UserCmd=new char[Share_Set.Message_Buff_Size];
-			if (UserCmd)
-				;
-			else
-				throw 0;
-		}
-		catch(short int ZERO)
-		{
-			UserCmd=new char[Share_Set.Message_Buff_Size];
-			if (UserCmd)
-				;
-			else
-			{
-				_Server_Logger_(S_FAIL_MEM);	// Because WORKUP_MEM_ERR = 0
-				return;
-			}
-
-		}
-		
-		// For accept.
-		int New_Chat(-1);
-
-		// Thread_FF arguments.
-		// This structure have some tcp setting parameters.
-		NETIOINFO NetIO={
-			.Network_File_IO_Buffer=Share_Set.File_Buff_Size,
-			.What_Behavior=0,
-			.Retry_Number=Share_Set.Retry_Net_IO,
-			};
-
-		// This structure will send to Thread_FF.
-		FGU Thread_Resource={
-			.Tcp_sock=TSC,
-			.Fid=FIDC,
-			.Thread=PTC,
-			.Timer_Timeout=Comm_Wait_Seconds,
-			.Net_io=&NetIO,
-			.Work_id=SERVER_ID,
-			};
-
-		// Their member value could be determines before them had be used.
-
-		// For peer address.
-		struct sockaddr_in Client_Address;
-		socklen_t Address_Length(0);
-		char Address_String[16];	// For string.
-
-		// For poll.
-		struct pollfd TempPoll;
-
-		// Bind socket.
-		if (TSC->_BIND_(MAIN_SOCKET) < 0)
-		{
-			_Server_Logger_(S_BIND_ERR);
-//			syslog(LOG(LOG_ERR),"FTPR_Server: Can not bind communication socket.");
-			goto _WorkUp_Quit;
-		}
-		else
-			if (TSC->_LISTEN_(MAIN_SOCKET,1) < 0)
-			{
-				_Server_Logger_(S_LISTEN_ERR);
-//				syslog(LOG(LOG_ERR),"FTPR_Server: Can not open listen queue for communication socket.");
-				goto _WorkUp_Quit;
-			}
-			else;
-
-		// Entry cycle.
-
-		while (true && Server_Should_Not_To_Stop)
-		{
-
-			_Server_Logger_(S_ENTRY_WORK_ACCEPT);	// Record.
-
-			// Wait connection arrived.	
-			New_Chat=TSC->_ACCEPT_(MAIN_SOCKET,(struct sockaddr *)&Client_Address,&Address_Length);
-			if (New_Chat > 0)
-			{
-				// Set wait target.
-				TempPoll.fd=New_Chat;
-				TempPoll.events=POLLRDNORM;
-
-				// Succeed to accept a connection.
-				syslog(LOG(LOG_NOTICE),"FTPR_Server: Succeed to accept a connection %s:%hu",TSC->_INET_NTOP_(AF_INET,&Client_Address,Address_String,16),TSC->_NTOHS_(Client_Address.sin_port));
-
-				TSC->_SET_POLLFD_(MAIN_SOCKET,TempPoll);	// Set pollfd.
-
-				// Entry communication cycle.
-
-				do
-				{
-
-					TSC->_POLL_(MAIN_SOCKET);	// Wait poll timeout or data arrived.
-					if (! TSC->_Check_Main_(POLLRDNORM))
-						continue;
-					else;	
-						
-					// Client sent data.
-
-					if (TSC->_READ_SOCK_(New_Chat,UserCmd,Share_Set.Message_Buff_Size) > 0)
-					{
-						// Call command parasing.
-
-						_Command_Parsing_(UserCmd);
-
-						// Check WCH structure.
-
-						switch (The_CMD_Hit.CMDN)
-						{
-							case LS:
-								_Server_Logger_(S_CMD_LS);							
-
-								// Cycle to write data.
-								_LS_(New_Chat,UserCmd);
-
-								break;
-
-							case CD:
-								_Server_Logger_(S_CMD_CD);
-								
-								_CD_(New_Chat,(const char *)The_CMD_Hit.CMDP);
-								break;
-
-							case GET:
-								_Server_Logger_(S_CMD_GET);
-								NetIO.What_Behavior=GET_FILE;	// Set cause.
-								_GET_FILE_(&Thread_Resource,New_Chat);	// Process this cmd.
-
-								break;
-																
-							case UP:
-								_Server_Logger_(S_CMD_UP);
-								NetIO.What_Behavior=UP_FILE;
-								_UP_FILE_(&Thread_Resource,New_Chat);	// Process this cmd.
-
-								break;
-			
-							case LOGOUT:
-								goto UserLogout;	// User want to quit.
-						
-							default:
-								syslog(LOG(LOG_ERR),"FTPR_Server: None defined command.");
-						}
-
-						// Switch end.
-					}
-					else
-						break;	// EOF/error.
-
-				} while (true && Server_Should_Not_To_Stop);
-
-				// User logout.
-
-				UserLogout:
-					TSC->_SHUTDOWN_(New_Chat,SHUT_RDWR);
-
-			}
-			else
-			{	
-				// Failed to accept a connection.
-				syslog(LOG(LOG_NOTICE),"FTPR_Server: Failed to accept a connection .");
-			}
-			// Accept.	
-
-		}	// While
-
-
-		_WorkUp_Quit:
-
-			delete[] UserCmd;	// Recycle resource.
-	}
-
-	void FTPR_Server_class::_Server_Shutdown_(void)
-	{
-		
-		_Server_Logger_(S_ENTRY_DOWN);
-
-		// The destroy working will be responing by their clear method.
-
-		if (FIDC)
-		{
-			delete FIDC;
-			syslog(LOG(LOG_NOTICE),"FTPR_Server: Delete File-Directory obj.");
-		}
-		else;
-		if (PTC)
-		{
-			delete PTC;
-			syslog(LOG(LOG_NOTICE),"FTPR_Server: Delete Posix Thread obj.");
-		}
-		else;
-		if (TSC)
-		{
-			delete TSC;
-			syslog(LOG(LOG_NOTICE),"FTPR_Server: Delete Socket obj.");
-		}
-		else;
-		if (SYSS)
-		{
-			delete SYSS;
-			syslog(LOG(LOG_NOTICE),"FTRP_Server: Delete Signal obj.");
-		}
-		else;
-
-		syslog(LOG(LOG_NOTICE),"FTPR_Server: Server shutdown.");
-
-	}
-
 	void FTPR_Server_class::_LS_(const int Peer_Sock,char *LS_Buffer)
 	{
+		
 		do
 		{
 			FIDC->_TRAVERSE_(LS_Buffer);
 			if (*LS_Buffer != '\0')
-				TSC->_WRITE_SOCK_(Peer_Sock,LS_Buffer,sizeof(LS_Buffer));
+				TSC->_WRITE_SOCK_(Peer_Sock,LS_Buffer,strlen(LS_Buffer)+1);
 			else
 				break;	// Next reading mut return head iterm,so break cycle.
 		} while(true);
-		TSC->_WRITE_SOCK_(Peer_Sock,"#EOF#",5);	// End.
+
+		TSC->_WRITE_SOCK_(Peer_Sock,"#EOF#",6);	// End.
+
 	}
 
 	void FTPR_Server_class::_CD_(const int Peer_Sock,const char *New_Dir)
 	{
 		// Peer_Sock for tell peer result.
 
+		syslog(LOG(LOG_NOTICE),"FTPR_Server: New directory target - %s ",New_Dir);
+
 		if (FIDC->_CHDIR_(New_Dir))
 		{
-			TSC->_WRITE_SOCK_(Peer_Sock,"Changed directory.",18);
+			write(Peer_Sock,"Changed directory.",18+1);
 			_Server_Logger_(S_CD_T);
 		}
 		else
 		{
-			TSC->_WRITE_SOCK_(Peer_Sock,"Failed to change directory.",27);
+			write(Peer_Sock,"Failed to change directory.",27+1);
 			_Server_Logger_(S_CD_F);
 		}
 
@@ -703,14 +375,15 @@ namespace FTPR_SERVER{
 				
 				// Tell client file information.
 				TSC->_WRITE_SOCK_(Client_Socket,"#OK#",4);	// Notice client to receive file information from socket.
+				sleep(1);
 				TSC->_WRITE_SOCK_(Client_Socket,&File_Info,sizeof(File_Info));
 
 				PTC->_LOCK_MUTEX_();
 				PTC->_JOIN_THREAD_(PT,(void **)&Get_Thread_Msg);	// Wait thread.
 				FIDC->_CLOSE_(FIDC->_Get_Latest_Open_File_());	// Close file.
 			
-				if (*Get_Thread_Msg != FF_GET_SUSS)
-					_FTPR_Logger_(*Get_Thread_Msg);	// FTPR logger.
+				if ((long int)Get_Thread_Msg != FF_GET_SUSS)
+					_FTPR_Logger_((long int)Get_Thread_Msg);	// FTPR logger.
 				else;
 
 			}
@@ -832,14 +505,15 @@ namespace FTPR_SERVER{
 		{
 			PTC->_UNLOCK_MUTEX_();	// Release lock.
 			TSC->_WRITE_SOCK_(Client_Socket,"#OK#",4);	// Notice client receive file info.
+			sleep(1);
 			TSC->_WRITE_SOCK_(Client_Socket,&File_Info,sizeof(File_Info));	// Send info.
 			PTC->_LOCK_MUTEX_();	// Lock thread.
 		
 			// Wait thread.
 			PTC->_JOIN_THREAD_(PT,(void **)&Get_Thread_Msg);
 			// Check
-			if (*Get_Thread_Msg != FF_UP_SUSS)
-				_FTPR_Logger_(*Get_Thread_Msg);	// FTPR logger.
+			if ((long int)Get_Thread_Msg != FF_UP_SUSS)
+				_FTPR_Logger_((long int)Get_Thread_Msg);	// FTPR logger.
 			else
 				if (fstat(TempFileDes,&Temp_File_Stat) < 0)
 					_Server_Logger_(S_TMP_FILE_STAT_F);
@@ -864,6 +538,43 @@ namespace FTPR_SERVER{
 
 			FIDC->_CLOSE_(TempFileDes);	// Close temp file.
 			TSC->_WRITE_SOCK_(Client_Socket,Msg,strlen(Msg));
+	}
+
+	void FTPR_Server_class::_Server_Shutdown_(void)
+	{
+		if (PTC)
+		{
+			delete PTC;
+			PTC=NULL;
+			syslog(LOG(LOG_NOTICE),"FTPR_Server: Posix thread object had destroied.");
+		}
+		else;
+
+		if (TSC)
+		{
+			delete TSC;
+			TSC=NULL;
+			syslog(LOG(LOG_NOTICE),"FTPR_Server: Socket object had destroied.");
+		}
+		else;
+
+		if (SYSS)
+		{
+			delete SYSS;
+			SYSS=NULL;
+			syslog(LOG(LOG_NOTICE),"FTPR_Server: Signal object had destroied.");
+		}
+		else;
+
+		if (FIDC)
+		{
+			delete FIDC;
+			FIDC=NULL;
+			syslog(LOG(LOG_NOTICE),"FTPR_Server: File&Directory object had destroied.");
+		}
+		else;
+
+		syslog(LOG(LOG_NOTICE),"FTPR_Server: Objects destroying over.");
 	}
 
 
@@ -979,6 +690,18 @@ namespace FTPR_SERVER{
 				break;
 	
 			// Responer.
+
+			case S_FAIL_MEM:
+				_Copy_String_(LogMsg,"FTPR_Server: Failed to get memmory of user command buffer.",58);
+				break;
+
+			case S_BIND_ERR:
+				_Copy_String_(LogMsg,"FTPR_Server: Failed to bind socket.",35);
+				break;
+			
+			case S_LISTEN_ERR:
+				_Copy_String_(LogMsg,"FTPR_Server: Failed to open listen queue.",41);
+				break;
 
 			// LS
 
