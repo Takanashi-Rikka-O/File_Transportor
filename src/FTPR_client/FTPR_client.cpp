@@ -42,6 +42,7 @@
 //		"FTPR_client_class.h"
 //
 //	Fix : 
+//		1> _LS_ optimize,use last string match to instend 'strstr' search.
 
 #include"FTPR_client.h"
 
@@ -230,7 +231,21 @@ namespace FTPR_CLIENT{
 								Buffer[i]='\n';
 							else;
 						Buffer[ReallyRead]='\0';
-						Cycle_Continue=(strstr(Buffer,"#EOF#") != NULL)?false:true;
+				
+
+						/*	Only match the last.	*/
+						/*
+ 						 * Subtraction is the server write '#EOF#' all is 6B to the socket.
+ 						 *
+ 						 */
+ 
+						if (strncmp(&Buffer[ReallyRead-6],"#EOF#",5) == 0)
+						{
+							Cycle_Continue=false;
+							Buffer[ReallyRead-6]='\0';
+						}
+						else;
+
 						cout<<Buffer;
 					}
 					else

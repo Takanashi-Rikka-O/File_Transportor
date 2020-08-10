@@ -80,6 +80,6 @@ clean:
 
 # Pay a notice on there,do not adding option '-r' for 'rm'.
 destroy:
-	@rm --interactive ftprsd ftprc /usr/lib/libFTPR_Basic.so /usr/lib/libFTPR_THREAD.so /usr/lib/libFTPR_Client.so /usr/lib/libFTPR_Server.so
+	@rm --interactive bin/ftprsd bin/ftprc /usr/lib/libFTPR_Basic.so /usr/lib/libFTPR_THREAD.so /usr/lib/libFTPR_Client.so /usr/lib/libFTPR_Server.so
 
 
