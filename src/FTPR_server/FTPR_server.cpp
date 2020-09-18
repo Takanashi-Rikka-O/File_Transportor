@@ -1,7 +1,7 @@
 //	FTPR_server.cpp
 //	Version : 0.2.1
 //	Date : Fri Jun 12 10:31:41 2020
-//	Last revise : Sat Jul 18 21:18:? 2020
+//	Last revise : Fri Sep 18 09:51:? 2020
 //	Symbol-Constraint :
 //			_Xx..._ - Function Symbol
 //			Xx...|x|X - Variable Symbol
@@ -20,6 +20,7 @@
 //		3> Make a server logger to record all logs.
 //		4> Fix the TCP class failed to init.
 //		5> After server had finished 'up file' successfully,it will remake linked-list.
+//		6> Adding 'unlink' for tempfile,because the file created via 'mkstemp' would not automatically to be deleted.
 
 
 #include"FTPR_server.h"
@@ -533,6 +534,7 @@ namespace FTPR_SERVER{
 
 		File_Lock.l_type=F_UNLCK;	// Unlock.
 		(void)FIDC->_LOCK_FILE_(TempFileDes,F_SETLK,&File_Lock);
+		FIDC->_UNLINK_(TempFile_Name);	/* Because 'mkstemp' create tmpfile would not automatically to be deleted. */
 
 		_UP_FILE_QUIT:
 

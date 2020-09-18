@@ -42,7 +42,7 @@ $(ALLOBJS):%.o:%.cpp
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 $(LIBS):%.so:%.cpp
-	$(CC) $(CFLAGS) -fPIC -shared -o $@ -c $<
+	$(CC) $(CFLAGS) -fPIC -shared -o $@ $<
 	cp $@ /usr/lib/
 
 Hint_Message:

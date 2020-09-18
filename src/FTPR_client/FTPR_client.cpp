@@ -1,7 +1,7 @@
 //	FTPR_client.cpp
-//	Version : 0.1
+//	Version : 0.2
 //	Date : Sat Jul  4 14:42:06 2020
-//	Last revise : Sat Jul  18 21:16:? 2020
+//	Last revise : Fri Sep  18 09:51:? 2020
 //	Symbol-Constraint :
 //			_Xx..._ - Function Symbol
 //			Xx...|x|X - Variable Symbol
@@ -43,6 +43,7 @@
 //
 //	Fix : 
 //		1> _LS_ optimize,use last string match to instend 'strstr' search.
+//		2> Because tmpfile created via 'mkstemp' would not automatically to be deleted,so adding invoking 'unlink'.
 
 #include"FTPR_client.h"
 
@@ -477,6 +478,12 @@ namespace FTPR_CLIENT{
 				else;
 
 				FIDC->_CLOSE_(TmpFile);	// Close temp file.
+				FIDC->_UNLINK_(TempFileName);	// Because the mkstemp would not delete the tempfile.
+				
+				/*
+				 * Temporary file should is open(create) and then just unlink it.
+				 * But the file was created via 'mkstemp' will not automatically to be deleted after program shut down.
+				 */
 			}
 			else;
 
