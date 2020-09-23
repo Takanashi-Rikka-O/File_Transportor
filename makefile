@@ -27,7 +27,6 @@ ShareLibServer=libFTPR_Server.so
 ShareLibClient=libFTPR_Client.so
 LIBS=$(ShareLib) $(ShareLibServer) $(ShareLibClient)
 
-
 ALLOBJS=$(ServerDeps) $(ClientDeps) $(CommonDeps)	# All object target.
 
 # Primary path of build files.
@@ -50,9 +49,9 @@ Hint_Message:
 
 # Server
 server:$(ServerDeps) $(ShareLib) $(AsmOBJ) $(CommonDeps) $(ShareLibServer)
-	$(CC) $(CFLAGS) -o ftprsd $(ServerDeps) $(CommonDeps) $(AsmOBJ) -lFTPR_Basic -lFTPR_THREAD -lFTPR_Server -lpthread
-	mv --interactive ftprsd bin/
 	ldconfig
+	$(CC) $(CFLAGS) -o ftprsd $(ServerDeps) -lFTPR_Server -lFTPR_Basic -lFTPR_THREAD $(CommonDeps) -lpthread $(AsmOBJ)
+	mv --interactive ftprsd bin/
 	@if [ ! -e $(CONFIGUREDIR) ]; \
 	then \
 		mkdir $(CONFIGUREDIR); \
@@ -62,9 +61,9 @@ server:$(ServerDeps) $(ShareLib) $(AsmOBJ) $(CommonDeps) $(ShareLibServer)
 
 # Client
 client:$(ClientDeps) $(ShareLib) $(AsmOBJ) $(CommonDeps) $(ShareLibClient)
-	$(CC) $(CFLAGS) -o ftprc $(ClientDeps) $(AsmOBJ) $(CommonDeps) -lFTPR_Basic -lFTPR_THREAD -lpthread -lFTPR_Client
-	mv --interactive ftprc bin/
 	ldconfig
+	$(CC) $(CFLAGS) -o ftprc $(ClientDeps) -lFTPR_Client -lFTPR_Basic -lFTPR_THREAD $(CommonDeps)  -lpthread $(AsmOBJ)
+	mv --interactive ftprc bin/
 	@if [ ! -e $(CONFIGUREDIR) ]; \
 	then \
 		mkdir $(CONFIGUREDIR); \
